@@ -44,7 +44,7 @@ export default function LocationScreen() {
 
       <View style={[styles.bottomCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.cardTop}>
-          <View style={[styles.addressIcon, { backgroundColor: "#FFF9D6" }]}><IconSymbol name="location.fill" size={22} color="#111111" /></View>
+          <View style={[styles.addressIcon, { backgroundColor: colors.primarySoft }]}><IconSymbol name="location.fill" size={22} color="#111111" /></View>
           <View style={styles.addressCopy}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>موقع التوصيل المحدد</Text>
             <Text style={[styles.address, { color: colors.muted }]}>{confirmed ? "تم تثبيت الموقع على الخريطة" : "حرّك الخريطة للتحديد بدقة"}</Text>
