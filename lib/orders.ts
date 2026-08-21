@@ -41,6 +41,8 @@ export type Order = {
   messages: OrderMessage[];
   tracking: OrderTracking;
   timeline: OrderTimeline;
+  items?: { name: string; quantity: number; price: number }[];
+  storeId?: string;
 };
 
 const ORDERS_KEY = "zak_orders_v1";
@@ -87,12 +89,12 @@ function createOrderNumber() {
   return `ZAK-${datePart}-${suffix}`;
 }
 
-export async function createOrder(input: Pick<Order, "total" | "payment" | "note" | "address">) {
+export async function createOrder(input: Pick<Order, "total" | "payment" | "note" | "address"> & Partial<Pick<Order, "items" | "storeId" | "storeName">>) {
   const now = new Date().toISOString();
   const order: Order = {
     id: `order-${Date.now()}`,
     orderNumber: createOrderNumber(),
-    storeName: "مذاق المدينة",
+    storeName: input.storeName ?? "مذاق المدينة",
     total: input.total,
     deliveryFee: 4,
     payment: input.payment,
@@ -117,10 +119,26 @@ export async function createOrder(input: Pick<Order, "total" | "payment" | "note
       driverPickedUpAt: null,
       deliveredAt: null,
     },
+    items: input.items,
+    storeId: input.storeId,
   };
   const orders = await getOrders();
   await saveOrders([order, ...orders]);
   return order;
+}
+
+export async function reorderOrder(orderId: string) {
+  const previous = await getOrder(orderId);
+  if (!previous) return null;
+  return createOrder({
+    total: previous.total,
+    payment: previous.payment,
+    note: previous.note,
+    address: previous.address,
+    items: previous.items,
+    storeId: previous.storeId,
+    storeName: previous.storeName,
+  });
 }
 
 export async function getOrder(id: string) {
