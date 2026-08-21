@@ -50,9 +50,15 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
-    "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+      NSLocationWhenInUseUsageDescription:
+        "يستخدم زاك موقعك لتحديد عنوان التوصيل وتتبع الطلب.",
+      NSCameraUsageDescription:
+        "يستخدم زاك الكاميرا لإرفاق صور الشكاوى والطرود عند الحاجة.",
+      NSPhotoLibraryUsageDescription:
+        "يستخدم زاك مكتبة الصور لإرفاق صور الشكاوى والطرود.",
+    }
   },
   android: {
     adaptiveIcon: {
