@@ -5,6 +5,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { createOrder } from "@/lib/orders";
+import { trpc } from "@/lib/trpc";
 
 export default function CheckoutScreen() {
   const colors = useColors();
@@ -12,12 +13,30 @@ export default function CheckoutScreen() {
   const [payment, setPayment] = useState<"cash" | "card">("cash");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const syncOrder = trpc.orders.sync.useMutation();
   const total = Number(params.total ?? 0);
 
   const confirmOrder = async () => {
     if (submitting) return;
     setSubmitting(true);
     const order = await createOrder({ total, payment, note, address: "طرابلس، العنوان المحدد على الخريطة" });
+    try {
+      await syncOrder.mutateAsync({
+        orderNumber: order.orderNumber,
+        status: order.status,
+        restaurantReceivedAt: new Date(order.timeline.restaurantReceivedAt),
+        preparingAt: new Date(order.timeline.preparingAt),
+        driverPickedUpAt: null,
+        deliveredAt: null,
+        etaMinutes: order.tracking.etaMinutes,
+        driverLatitude: order.tracking.driverCoordinates.latitude,
+        driverLongitude: order.tracking.driverCoordinates.longitude,
+        destinationLatitude: order.tracking.destinationCoordinates.latitude,
+        destinationLongitude: order.tracking.destinationCoordinates.longitude,
+      });
+    } catch {
+      // الطلب المحلي يبقى متاحاً إذا لم يسجل المستخدم الدخول أو تعذر الاتصال بالخادم.
+    }
     router.replace({ pathname: "/order/[id]", params: { id: order.id } });
   };
 
