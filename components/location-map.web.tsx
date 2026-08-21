@@ -3,6 +3,6 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import type { Region } from "react-native-maps";
 
 export function LocationMap({}: { initialRegion: Region; region: Region; onRegionChangeComplete: (region: Region) => void }) {
-  return <View style={styles.container}><IconSymbol name="map.fill" size={46} color="#4F46E5" /><Text style={styles.title}>الخريطة التفاعلية تظهر داخل تطبيق الهاتف</Text><Text style={styles.text}>في المعاينة يمكن تأكيد الموقع الافتراضي، وعلى Android وiPhone يمكنك تحريك الخريطة بدقة.</Text></View>;
+  return <View style={styles.container}><IconSymbol name="map.fill" size={46} color="#111111" /><Text style={styles.title}>الخريطة التفاعلية تظهر داخل تطبيق الهاتف</Text><Text style={styles.text}>في المعاينة يمكن تأكيد الموقع الافتراضي، وعلى Android وiPhone يمكنك تحريك الخريطة بدقة.</Text></View>;
 }
-const styles = StyleSheet.create({ container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28, backgroundColor: "#E8EEF7" }, title: { fontSize: 16, fontWeight: "800", textAlign: "center", marginTop: 14, color: "#111827" }, text: { fontSize: 12, lineHeight: 19, textAlign: "center", marginTop: 8, color: "#687076" } });
+const styles = StyleSheet.create({ container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28, backgroundColor: "#F7F7F7" }, title: { fontSize: 16, fontWeight: "800", textAlign: "center", marginTop: 14, color: "#111111" }, text: { fontSize: 12, lineHeight: 19, textAlign: "center", marginTop: 8, color: "#687076" } });

@@ -33,7 +33,7 @@ export default function LocationScreen() {
       <View style={styles.mapWrap}>
         <LocationMap initialRegion={initialRegion} region={region} onRegionChangeComplete={setRegion} />
         <View pointerEvents="none" style={styles.centerPin}>
-          <View style={styles.pinHalo}><IconSymbol name="location.fill" size={30} color="#071126" /></View>
+          <View style={styles.pinHalo}><IconSymbol name="location.fill" size={30} color="#111111" /></View>
         </View>
         <View style={[styles.mapControls, { backgroundColor: colors.surface }]}>
           <Pressable><IconSymbol name="plus" size={22} color={colors.foreground} /></Pressable>
@@ -44,7 +44,7 @@ export default function LocationScreen() {
 
       <View style={[styles.bottomCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.cardTop}>
-          <View style={[styles.addressIcon, { backgroundColor: "#FFF7E0" }]}><IconSymbol name="location.fill" size={22} color="#D99A00" /></View>
+          <View style={[styles.addressIcon, { backgroundColor: "#FFF9D6" }]}><IconSymbol name="location.fill" size={22} color="#111111" /></View>
           <View style={styles.addressCopy}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>موقع التوصيل المحدد</Text>
             <Text style={[styles.address, { color: colors.muted }]}>{confirmed ? "تم تثبيت الموقع على الخريطة" : "حرّك الخريطة للتحديد بدقة"}</Text>
@@ -56,7 +56,7 @@ export default function LocationScreen() {
         </View>
         <Pressable onPress={async () => { setConfirmed(true); await updateSavedLocation({ latitude: region.latitude, longitude: region.longitude, label: title || "موقع التوصيل المحدد", tag: tag === "work" || tag === "other" ? tag : "home" }); router.replace("/(tabs)"); }} style={styles.confirm}>
           <Text style={styles.confirmText}>تأكيد هذا العنوان</Text>
-          <IconSymbol name="checkmark" size={18} color="#111827" />
+          <IconSymbol name="checkmark" size={18} color="#111111" />
         </Pressable>
       </View>
     </ScreenContainer>
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   webMapTitle: { fontSize: 16, fontWeight: "800", textAlign: "center", marginTop: 14 },
   webMapText: { fontSize: 12, lineHeight: 19, textAlign: "center", marginTop: 8 },
   centerPin: { position: "absolute", left: "50%", top: "50%", marginLeft: -25, marginTop: -25 },
-  pinHalo: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#FFC400", borderWidth: 5, borderColor: "rgba(255,255,255,0.85)", alignItems: "center", justifyContent: "center" },
+  pinHalo: { width: 50, height: 50, borderRadius: 25, backgroundColor: "#FFD21F", borderWidth: 5, borderColor: "rgba(255,255,255,0.85)", alignItems: "center", justifyContent: "center" },
   mapControls: { position: "absolute", left: 14, top: 14, borderRadius: 13, paddingVertical: 6, paddingHorizontal: 8, alignItems: "center" },
   controlDivider: { width: 25, height: 1, marginVertical: 4 },
   bottomCard: { borderWidth: 1, margin: 12, padding: 15, borderRadius: 21 },
@@ -86,6 +86,6 @@ const styles = StyleSheet.create({
   coords: { marginTop: 12, padding: 10, borderRadius: 11, flexDirection: "row-reverse", justifyContent: "space-between" },
   coordsText: { fontSize: 11, fontVariant: ["tabular-nums"] },
   coordsLabel: { fontSize: 11 },
-  confirm: { height: 50, borderRadius: 14, backgroundColor: "#FFC400", flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12 },
-  confirmText: { color: "#111827", fontSize: 14, fontWeight: "900" },
+  confirm: { height: 50, borderRadius: 14, backgroundColor: "#FFD21F", flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12 },
+  confirmText: { color: "#111111", fontSize: 14, fontWeight: "900" },
 });

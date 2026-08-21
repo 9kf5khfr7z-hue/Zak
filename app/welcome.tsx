@@ -37,7 +37,7 @@ export default function WelcomeScreen() {
       };
 
   return (
-    <ScreenContainer edges={["top", "bottom", "left", "right"]} containerClassName="bg-[#F7B900]">
+    <ScreenContainer edges={["top", "bottom", "left", "right"]} containerClassName="bg-[#FFD21F]">
       <ImageBackground source={welcomeArtwork} resizeMode="cover" style={styles.background}>
         <View style={styles.overlay} />
         <View style={[styles.content, { direction: isArabic ? "rtl" : "ltr" }]}>
@@ -73,21 +73,21 @@ export default function WelcomeScreen() {
 
 const styles = StyleSheet.create({
   background: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(255, 190, 0, 0.14)" },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(255, 210, 31, 0.12)" },
   content: { flex: 1, paddingHorizontal: 24, paddingVertical: 28, justifyContent: "space-between" },
   topRow: { alignItems: "flex-end" },
   topSpace: { height: 24 },
-  languageSwitch: { alignSelf: "flex-end", flexDirection: "row", backgroundColor: "rgba(7, 17, 38, 0.14)", borderRadius: 16, padding: 3 },
+  languageSwitch: { alignSelf: "flex-end", flexDirection: "row", backgroundColor: "rgba(17, 17, 17, 0.14)", borderRadius: 16, padding: 3, borderWidth: 1, borderColor: "rgba(17, 17, 17, 0.18)" },
   languageOption: { minWidth: 72, height: 34, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  activeLanguage: { backgroundColor: "#071126" },
-  languageText: { color: "#071126", fontSize: 12, fontWeight: "800" },
-  activeLanguageText: { color: "#FFC400" },
+  activeLanguage: { backgroundColor: "#111111" },
+  languageText: { color: "#111111", fontSize: 12, fontWeight: "800" },
+  activeLanguageText: { color: "#FFD21F" },
   bottomBlock: { alignItems: "center", paddingBottom: 10 },
-  title: { color: "#071126", fontSize: 22, lineHeight: 30, fontWeight: "900", textAlign: "center" },
-  subtitle: { color: "#263043", fontSize: 13, lineHeight: 21, textAlign: "center", marginTop: 8, maxWidth: 320 },
-  primaryButton: { width: "100%", height: 56, borderRadius: 18, backgroundColor: "#071126", alignItems: "center", justifyContent: "center", marginTop: 22 },
-  primaryText: { color: "#FFC400", fontSize: 16, fontWeight: "900" },
+  title: { color: "#111111", fontSize: 24, lineHeight: 32, fontWeight: "900", textAlign: "center" },
+  subtitle: { color: "#2A2A2A", fontSize: 13, lineHeight: 21, textAlign: "center", marginTop: 8, maxWidth: 320 },
+  primaryButton: { width: "100%", height: 56, borderRadius: 18, backgroundColor: "#111111", alignItems: "center", justifyContent: "center", marginTop: 22 },
+  primaryText: { color: "#FFD21F", fontSize: 16, fontWeight: "900" },
   loginButton: { height: 44, alignItems: "center", justifyContent: "center", marginTop: 4 },
-  loginText: { color: "#071126", fontSize: 13, fontWeight: "800" },
+  loginText: { color: "#111111", fontSize: 13, fontWeight: "800" },
   pressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
 });
