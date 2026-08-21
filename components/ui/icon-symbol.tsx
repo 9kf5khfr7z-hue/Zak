@@ -38,6 +38,8 @@ const MAPPING = {
   "questionmark.circle.fill": "help-outline",
   "person.fill": "person",
   "shield.fill": "security",
+  "heart.fill": "favorite",
+  "heart": "favorite-border",
 } as unknown as IconMapping;
 
 /**

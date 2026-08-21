@@ -12,6 +12,7 @@ export default function TabLayout() {
   return <Tabs screenOptions={{ tabBarActiveTintColor: colors.primary, headerShown: false, tabBarButton: HapticTab, tabBarStyle: { paddingTop: 8, paddingBottom: bottomPadding, height: 56 + bottomPadding, backgroundColor: colors.background, borderTopColor: colors.border, borderTopWidth: 0.5 } }}>
     <Tabs.Screen name="index" options={{ title: "الرئيسية", tabBarIcon: ({ color }) => <IconSymbol size={24} name="house.fill" color={color} /> }} />
     <Tabs.Screen name="orders" options={{ title: "طلباتي", tabBarIcon: ({ color }) => <IconSymbol size={24} name="bag" color={color} /> }} />
+    <Tabs.Screen name="favorites" options={{ title: "المفضلة", tabBarIcon: ({ color }) => <IconSymbol size={24} name="heart.fill" color={color} /> }} />
     <Tabs.Screen name="support" options={{ title: "الدعم", tabBarIcon: ({ color }) => <IconSymbol size={24} name="headphones" color={color} /> }} />
     <Tabs.Screen name="profile" options={{ title: "حسابي", tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} /> }} />
   </Tabs>;
