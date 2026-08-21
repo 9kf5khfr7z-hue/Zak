@@ -114,3 +114,5 @@
 - [x] تجهيز إعدادات iOS للبناء عبر TestFlight أو App Store
 - [x] التحقق من Bundle Identifier ونسخة التطبيق وأيقونات iOS وإعدادات الخصوصية
 - [x] توثيق متطلبات Apple Developer والتوقيع دون حفظ بيانات حساسة في المستودع
+- [x] تجهيز إعداد Android وملف AAB للنشر على Google Play
+- [x] توثيق متطلبات Google Play Console والتوقيع دون حفظ أسرار في المستودع
