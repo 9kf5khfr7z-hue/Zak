@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { updateSavedLocation } from "@/lib/session";
 import { router } from "expo-router";
 import type { Region } from "react-native-maps";
 import { LocationMap } from "@/components/location-map";
@@ -52,7 +53,7 @@ export default function LocationScreen() {
           <Text style={[styles.coordsText, { color: colors.muted }]}>{coordinates}</Text>
           <Text style={[styles.coordsLabel, { color: colors.muted }]}>الإحداثيات</Text>
         </View>
-        <Pressable onPress={() => { setConfirmed(true); router.replace("/(tabs)"); }} style={styles.confirm}>
+        <Pressable onPress={async () => { setConfirmed(true); await updateSavedLocation({ latitude: region.latitude, longitude: region.longitude, label: "موقع التوصيل المحدد" }); router.replace("/(tabs)"); }} style={styles.confirm}>
           <Text style={styles.confirmText}>تأكيد هذا العنوان</Text>
           <IconSymbol name="checkmark" size={18} color="#111827" />
         </Pressable>
