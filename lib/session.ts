@@ -6,11 +6,15 @@ export type SavedLocation = {
   latitude: number;
   longitude: number;
   label: string;
+  tag?: AddressTag;
   isDefault?: boolean;
 };
 
+export type AddressTag = "home" | "work" | "other";
+
 export type SavedAddress = SavedLocation & {
   title: string;
+  tag?: AddressTag;
 };
 
 export type SavedSession = {

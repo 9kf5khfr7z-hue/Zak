@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { updateSavedLocation } from "@/lib/session";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import type { Region } from "react-native-maps";
 import { LocationMap } from "@/components/location-map";
 import { ScreenContainer } from "@/components/screen-container";
@@ -12,6 +12,7 @@ const initialRegion: Region = { latitude: 32.8872, longitude: 13.1913, latitudeD
 
 export default function LocationScreen() {
   const colors = useColors();
+  const { tag, title } = useLocalSearchParams<{ tag?: string; title?: string }>();
   const [region, setRegion] = useState(initialRegion);
   const [confirmed, setConfirmed] = useState(false);
   const coordinates = useMemo(() => `${region.latitude.toFixed(5)}, ${region.longitude.toFixed(5)}`, [region]);
@@ -53,7 +54,7 @@ export default function LocationScreen() {
           <Text style={[styles.coordsText, { color: colors.muted }]}>{coordinates}</Text>
           <Text style={[styles.coordsLabel, { color: colors.muted }]}>الإحداثيات</Text>
         </View>
-        <Pressable onPress={async () => { setConfirmed(true); await updateSavedLocation({ latitude: region.latitude, longitude: region.longitude, label: "موقع التوصيل المحدد" }); router.replace("/(tabs)"); }} style={styles.confirm}>
+        <Pressable onPress={async () => { setConfirmed(true); await updateSavedLocation({ latitude: region.latitude, longitude: region.longitude, label: title || "موقع التوصيل المحدد", tag: tag === "work" || tag === "other" ? tag : "home" }); router.replace("/(tabs)"); }} style={styles.confirm}>
           <Text style={styles.confirmText}>تأكيد هذا العنوان</Text>
           <IconSymbol name="checkmark" size={18} color="#111827" />
         </Pressable>
