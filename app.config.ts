@@ -85,6 +85,11 @@ const config: ExpoConfig = {
       },
     ],
   },
+  extra: {
+    eas: {
+      projectId: "f7026f7f-5536-4be5-916c-1796dc414cb4",
+    },
+  },
   web: {
     bundler: "metro",
     output: "static",
