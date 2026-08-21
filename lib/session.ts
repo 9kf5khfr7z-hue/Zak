@@ -2,9 +2,15 @@ import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 export type SavedLocation = {
+  id?: string;
   latitude: number;
   longitude: number;
   label: string;
+  isDefault?: boolean;
+};
+
+export type SavedAddress = SavedLocation & {
+  title: string;
 };
 
 export type SavedSession = {
@@ -12,6 +18,7 @@ export type SavedSession = {
   name: string;
   phone: string;
   location?: SavedLocation;
+  addresses?: SavedAddress[];
   signedInAt: string;
 };
 
@@ -49,7 +56,23 @@ export async function saveSession(session: SavedSession) {
 export async function updateSavedLocation(location: SavedLocation) {
   const current = await getSavedSession();
   if (!current) return;
-  await saveSession({ ...current, location });
+  const nextLocation = { ...location, id: location.id ?? "default", isDefault: true };
+  const addresses = current.addresses?.length ? current.addresses.map((address) => address.id === nextLocation.id ? { ...address, ...nextLocation } : { ...address, isDefault: false }) : [{ ...nextLocation, title: nextLocation.label }];
+  await saveSession({ ...current, location: nextLocation, addresses });
+}
+
+export async function saveAddresses(addresses: SavedAddress[]) {
+  const current = await getSavedSession();
+  if (!current) return;
+  const normalized = addresses.map((address, index) => ({ ...address, id: address.id ?? `address-${index + 1}`, isDefault: Boolean(address.isDefault) }));
+  const selected = normalized.find((address) => address.isDefault) ?? normalized[0];
+  await saveSession({ ...current, addresses: normalized.map((address) => ({ ...address, isDefault: address.id === selected?.id })), location: selected });
+}
+
+export async function updateProfile(name: string, phone: string) {
+  const current = await getSavedSession();
+  if (!current) return;
+  await saveSession({ ...current, name: name.trim(), phone: phone.trim() });
 }
 
 export async function clearSavedSession() {
