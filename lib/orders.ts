@@ -1,6 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type OrderStatus = "preparing" | "on_the_way" | "delivered";
+export type AssignmentStatus = "unassigned" | "offered" | "accepted" | "rejected";
+
+export type DriverAssignment = {
+  driverId: string;
+  status: AssignmentStatus;
+  offeredAt: string;
+  respondedAt: string | null;
+};
 
 export type OrderCoordinates = { latitude: number; longitude: number };
 
@@ -43,9 +51,11 @@ export type Order = {
   timeline: OrderTimeline;
   items?: { name: string; quantity: number; price: number }[];
   storeId?: string;
+  assignment?: DriverAssignment;
 };
 
 const ORDERS_KEY = "zak_orders_v1";
+const DRIVER_ACTIVE_ORDER_KEY = "zak_driver_active_order_v1";
 
 async function saveOrders(orders: Order[]) {
   await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
@@ -144,6 +154,65 @@ export async function reorderOrder(orderId: string) {
 export async function getOrder(id: string) {
   const orders = await getOrders();
   return orders.find((order) => order.id === id) ?? null;
+}
+
+export function canDriverTakeOrder(order: Order, activeOrderId?: string | null) {
+  if (order.status === "delivered") return false;
+  if (activeOrderId && activeOrderId !== order.id) return false;
+  return order.assignment?.status !== "accepted";
+}
+
+export async function getDriverActiveOrderId() {
+  return AsyncStorage.getItem(DRIVER_ACTIVE_ORDER_KEY);
+}
+
+export async function getNearbyDriverOrders(driverId: string, activeOrderId?: string | null) {
+  const orders = await getOrders();
+  return orders.filter((order) => {
+    const isOpen = order.status === "preparing" && (!order.assignment || order.assignment.status === "unassigned" || order.assignment.status === "offered");
+    return isOpen && canDriverTakeOrder(order, activeOrderId) && order.assignment?.driverId !== driverId;
+  });
+}
+
+export async function offerOrderToDriver(orderId: string, driverId: string) {
+  const orders = await getOrders();
+  const now = new Date().toISOString();
+  const next = orders.map((order) => order.id === orderId && (!order.assignment || order.assignment.status === "unassigned")
+    ? { ...order, assignment: { driverId, status: "offered" as const, offeredAt: now, respondedAt: null } }
+    : order);
+  await saveOrders(next);
+  return next.find((order) => order.id === orderId) ?? null;
+}
+
+export async function acceptDriverOrder(orderId: string, driverId: string) {
+  const activeOrderId = await getDriverActiveOrderId();
+  const orders = await getOrders();
+  const target = orders.find((order) => order.id === orderId);
+  if (!target || !canDriverTakeOrder(target, activeOrderId) || (target.assignment && target.assignment.driverId !== driverId && target.assignment.status !== "unassigned")) return null;
+  const now = new Date().toISOString();
+  const next = orders.map((order) => order.id === orderId
+    ? { ...order, assignment: { driverId, status: "accepted" as const, offeredAt: order.assignment?.offeredAt ?? now, respondedAt: now }, driverName: order.driverName === "السائق المناوب" ? `مندوب ${driverId}` : order.driverName }
+    : order);
+  await saveOrders(next);
+  await AsyncStorage.setItem(DRIVER_ACTIVE_ORDER_KEY, orderId);
+  return next.find((order) => order.id === orderId) ?? null;
+}
+
+export async function rejectDriverOrder(orderId: string, driverId: string) {
+  const orders = await getOrders();
+  const target = orders.find((order) => order.id === orderId);
+  if (!target || (target.assignment && target.assignment.driverId !== driverId)) return null;
+  const now = new Date().toISOString();
+  const next = orders.map((order) => order.id === orderId
+    ? { ...order, assignment: { driverId, status: "rejected" as const, offeredAt: order.assignment?.offeredAt ?? now, respondedAt: now } }
+    : order);
+  await saveOrders(next);
+  return next.find((order) => order.id === orderId) ?? null;
+}
+
+export async function clearDriverActiveOrder(orderId: string) {
+  const activeOrderId = await getDriverActiveOrderId();
+  if (activeOrderId === orderId) await AsyncStorage.removeItem(DRIVER_ACTIVE_ORDER_KEY);
 }
 
 export async function addOrderMessage(orderId: string, sender: OrderMessage["sender"], text: string) {
