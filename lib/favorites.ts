@@ -28,6 +28,8 @@ export type FavoriteOffer = {
   title: string;
   detail: string;
   discount: string;
+  discountPercent: number;
+  expiresAt: string;
   isRead: boolean;
 };
 
@@ -37,8 +39,8 @@ export type FavoritesState = {
 };
 
 const availableOffers: FavoriteOffer[] = [
-  { id: "offer-store-1", storeId: "1", storeName: "مذاق المدينة", title: "خصم 20% على الوجبات العائلية", detail: "العرض متاح حتى نهاية الأسبوع", discount: "20%", isRead: false },
-  { id: "offer-store-2", storeId: "2", storeName: "سوق الخير", title: "توصيل مجاني على مشترياتك", detail: "للطلبات داخل نطاق 5 كم", discount: "مجاني", isRead: false },
+  { id: "offer-store-1", storeId: "1", storeName: "مذاق المدينة", title: "خصم 20% على الوجبات العائلية", detail: "ينتهي في 30 أغسطس 2026", discount: "20%", discountPercent: 20, expiresAt: "2026-08-30", isRead: false },
+  { id: "offer-store-2", storeId: "2", storeName: "سوق الخير", title: "خصم 10% وتوصيل مجاني", detail: "ينتهي في 25 أغسطس 2026", discount: "10%", discountPercent: 10, expiresAt: "2026-08-25", isRead: false },
 ];
 
 const FAVORITES_KEY = "zak_favorites_v1";
