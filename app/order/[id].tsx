@@ -20,11 +20,12 @@ export default function OrderDetailsScreen() {
     { orderNumber: order?.orderNumber ?? "" },
     { enabled: Boolean(order?.orderNumber), refetchInterval: 15000 },
   );
+  const { refetch: refetchTracking } = trackingQuery;
 
   const refresh = useCallback(async () => {
     if (id) setOrder(await getOrder(id));
-    await trackingQuery.refetch();
-  }, [id, trackingQuery.refetch]);
+    await refetchTracking();
+  }, [id, refetchTracking]);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   useEffect(() => {

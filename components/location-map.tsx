@@ -4,6 +4,8 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 
 export function LocationMap({ initialRegion, region, onRegionChangeComplete }: { initialRegion: Region; region: Region; onRegionChangeComplete: (region: Region) => void }) {
   if (Platform.OS !== "web") {
+    // The native map module must stay lazy to keep the web bundle free of native map dependencies.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const NativeMapView = require("./location-map.native").LocationMap;
     return <NativeMapView initialRegion={initialRegion} region={region} onRegionChangeComplete={onRegionChangeComplete} />;
   }

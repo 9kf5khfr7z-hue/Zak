@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
@@ -23,7 +23,7 @@ export default function VerifyScreen() {
 
   const maskedPhone = useMemo(() => phone.length > 4 ? `${phone.slice(0, 3)} **** ${phone.slice(-2)}` : phone, [phone]);
 
-  const sendCode = async () => {
+  const sendCode = useCallback(async () => {
     setBusy(true);
     setMessage("");
     try {
@@ -37,9 +37,9 @@ export default function VerifyScreen() {
     } finally {
       setBusy(false);
     }
-  };
+  }, [phone]);
 
-  useEffect(() => { void sendCode(); }, []);
+  useEffect(() => { void sendCode(); }, [sendCode]);
   useEffect(() => {
     if (!expiresAt) return;
     const timer = setInterval(() => setSeconds(otpSecondsLeft(expiresAt)), 1000);

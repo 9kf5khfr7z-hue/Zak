@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { saveSession } from "@/lib/session";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";

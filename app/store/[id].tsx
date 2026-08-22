@@ -20,7 +20,7 @@ export default function StoreDetailsScreen() {
   const [favoriteStore, setFavoriteStore] = useState(false);
   const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>([]);
   const store = { id: "1", name: "مذاق المدينة", category: "restaurants", subtitle: "وجبات بيتية ومشاوي", distance: "1.8 كم", time: "25-35 د", rating: "4.8", icon: "restaurant" };
-  useEffect(() => { getFavorites().then((saved) => { setFavoriteStore(saved.stores.some((item) => item.id === store.id)); setFavoriteProductIds(saved.products.filter((item) => item.storeId === store.id).map((item) => item.id)); }); }, []);
+  useEffect(() => { getFavorites().then((saved) => { setFavoriteStore(saved.stores.some((item) => item.id === store.id)); setFavoriteProductIds(saved.products.filter((item) => item.storeId === store.id).map((item) => item.id)); }); }, [store.id]);
   const totalItems = Object.values(cart).reduce((sum, value) => sum + value, 0);
   const total = useMemo(() => products.reduce((sum, product) => sum + product.price * (cart[product.id] ?? 0), 0), [cart]);
   const updateQuantity = (id: string, change: number) => setCart((current) => { const next = Math.max(0, (current[id] ?? 0) + change); const copy = { ...current }; if (next === 0) delete copy[id]; else copy[id] = next; return copy; });
