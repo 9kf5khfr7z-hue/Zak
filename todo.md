@@ -233,3 +233,6 @@
 - [x] تنظيف imports وroutes وreferences الناتجة مباشرة عن الحذف
 - [x] تشغيل TypeScript وlint وbuild والتحقق من عدم تغيير تدفق Customer → Order → Driver
 - [x] حفظ checkpoint لتعديل Merchant UI والمهارة الجديدة
+- [x] إضافة اختبار Architecture/Guard يمنع وجود Merchant UI route أو component في Phase 2
+- [x] تشغيل جميع الاختبارات وTypeScript وlint وbuild دون تعديل business logic
+- [x] حفظ checkpoint لاختبار الحماية المعمارية الجديد
