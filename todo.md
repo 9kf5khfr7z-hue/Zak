@@ -220,5 +220,9 @@
 - [x] استبدال pointerEvents المباشر في app/location.tsx بصيغة style.pointerEvents
 - [x] إضافة pnpm lint && pnpm check إلى مسار CI قبل أي build أو APK
 - [x] تشغيل pnpm lint وpnpm check وpnpm test والتحقق من سجلات التشغيل
-- [ ] مراجعة عدم ظهور تحذير props.pointerEvents is deprecated في السجلات
+- [x] مراجعة عدم ظهور تحذير props.pointerEvents is deprecated في السجلات
 - [ ] حفظ checkpoint جاهز لإنشاء APK Preview عبر واجهة المشروع
+- [x] تجربة تحديث react-native-reanimated المتوافق مع Expo SDK 54
+- [x] تشغيل check وlint وtest بعد تحديث Reanimated
+- [x] مراجعة سجل التشغيل والتحقق من تحذير pointerEvents
+- [x] حفظ checkpoint للتحديث أو الرجوع للنسخة المستقرة عند حدوث كسر
