@@ -226,3 +226,10 @@
 - [x] تشغيل check وlint وtest بعد تحديث Reanimated
 - [x] مراجعة سجل التشغيل والتحقق من تحذير pointerEvents
 - [x] حفظ checkpoint للتحديث أو الرجوع للنسخة المستقرة عند حدوث كسر
+- [x] قراءة skill-creator وتحديد صيغة المهارة القابلة لإعادة الاستخدام
+- [x] إنشاء مهارة توثق منهج ZAK Development-Only ومسار Customer → Order → Driver
+- [x] فحص جميع مراجع Merchant UI قبل الحذف
+- [x] حذف app/merchant/index.tsx والملفات الخاصة غير المستخدمة فقط
+- [x] تنظيف imports وroutes وreferences الناتجة مباشرة عن الحذف
+- [x] تشغيل TypeScript وlint وbuild والتحقق من عدم تغيير تدفق Customer → Order → Driver
+- [x] حفظ checkpoint لتعديل Merchant UI والمهارة الجديدة
