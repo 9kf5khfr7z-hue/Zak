@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { canTransition, toCanonicalStatus } from "../shared/order-state";
 
 export type OrderStatus = "preparing" | "on_the_way" | "delivered";
 export type AssignmentStatus = "unassigned" | "offered" | "accepted" | "rejected";
@@ -157,7 +158,7 @@ export async function getOrder(id: string) {
 }
 
 export function canDriverTakeOrder(order: Order, activeOrderId?: string | null) {
-  if (order.status === "delivered") return false;
+  if (toCanonicalStatus(order.status) === "DELIVERED") return false;
   if (activeOrderId && activeOrderId !== order.id) return false;
   return order.assignment?.status !== "accepted";
 }
@@ -188,7 +189,7 @@ export async function acceptDriverOrder(orderId: string, driverId: string) {
   const activeOrderId = await getDriverActiveOrderId();
   const orders = await getOrders();
   const target = orders.find((order) => order.id === orderId);
-  if (!target || !canDriverTakeOrder(target, activeOrderId) || (target.assignment && target.assignment.driverId !== driverId && target.assignment.status !== "unassigned")) return null;
+  if (!target || !canDriverTakeOrder(target, activeOrderId) || !canTransition(toCanonicalStatus(target.status), "DRIVER_ACCEPTED", "driver") || (target.assignment && target.assignment.driverId !== driverId && target.assignment.status !== "unassigned")) return null;
   const now = new Date().toISOString();
   const next = orders.map((order) => order.id === orderId
     ? { ...order, assignment: { driverId, status: "accepted" as const, offeredAt: order.assignment?.offeredAt ?? now, respondedAt: now }, driverName: order.driverName === "السائق المناوب" ? `مندوب ${driverId}` : order.driverName }
