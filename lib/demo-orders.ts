@@ -23,6 +23,8 @@ const ORDERS_KEY = "zak_demo_orders_v1";
 const ACTIVE_DRIVER_KEY = "zak_demo_active_driver_v1";
 const DEMO_DRIVER_ID = "driver-demo-001";
 let memoryStore: Record<string, string> = {};
+let dispatchInProgress = false;
+let orderSequence = 0;
 
 async function readValue(key: string) {
   try { return await AsyncStorage.getItem(key); } catch { return memoryStore[key] ?? null; }
@@ -56,10 +58,11 @@ export async function getDemoOrder(id: string): Promise<DemoOrder | null> {
 
 export async function createDemoOrder(input?: Partial<Pick<DemoOrder, "customerName" | "address" | "items" | "total" | "payment">>) {
   const now = new Date().toISOString();
-  const id = `demo-order-${Date.now()}`;
+  const sequence = ++orderSequence;
+  const id = `demo-order-${Date.now()}-${sequence}`;
   const order: DemoOrder = {
     id,
-    orderNumber: `ZAK-D${String(Date.now()).slice(-6)}`,
+    orderNumber: `ZAK-D${String(Date.now()).slice(-6)}-${sequence}`,
     customerName: input?.customerName ?? "زبون التجربة",
     storeName: "مطعم زاك التجريبي",
     address: input?.address ?? "طرابلس · عنوان تجريبي",
@@ -92,9 +95,16 @@ export async function transitionDemoOrder(id: string, to: OrderStatus, actor: Or
 }
 
 export async function startDemoDispatch(id: string) {
-  let order = await transitionDemoOrder(id, "SEARCHING_DRIVER", "system");
-  order = await transitionDemoOrder(order.id, "DRIVER_ASSIGNED", "system");
-  return order;
+  if (dispatchInProgress) throw new Error("Demo driver is already processing another dispatch");
+  dispatchInProgress = true;
+  try {
+    if (await getDemoActiveDriverOrder()) throw new Error("Demo driver already has an active trip");
+    let order = await transitionDemoOrder(id, "SEARCHING_DRIVER", "system");
+    order = await transitionDemoOrder(order.id, "DRIVER_ASSIGNED", "system");
+    return order;
+  } finally {
+    dispatchInProgress = false;
+  }
 }
 
 export async function getDemoActiveDriverOrder(): Promise<DemoOrder | null> {
@@ -106,6 +116,8 @@ export async function resetDemoOrders() {
   await removeValue(ORDERS_KEY);
   await removeValue(ACTIVE_DRIVER_KEY);
   memoryStore = {};
+  dispatchInProgress = false;
+  orderSequence = 0;
 }
 
 export { DEMO_DRIVER_ID };

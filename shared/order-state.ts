@@ -64,10 +64,13 @@ export function canTransition(from: OrderStatus, to: OrderStatus, actor: OrderAc
   return getTransition(from, to)?.allowedActors.includes(actor) ?? false;
 }
 
-export function assertTransition(from: OrderStatus, to: OrderStatus, actor: OrderActor): OrderTransition {
+export function assertTransition(from: OrderStatus, to: OrderStatus, actor: OrderActor, options: { reason?: string } = {}): OrderTransition {
   const rule = getTransition(from, to);
   if (!rule || !rule.allowedActors.includes(actor)) {
     throw new Error(`Illegal order transition: ${from} -> ${to} by ${actor}`);
+  }
+  if (to === "CANCELLED" && !options.reason?.trim()) {
+    throw new Error("Cancellation reason is required");
   }
   return rule;
 }
