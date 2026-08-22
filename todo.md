@@ -188,3 +188,18 @@
 
 - [x] تحليل مواصفات Pasted_content_02 وإنشاء وثيقة zak-phase-1-architecture.md مع المعمارية وERD وAPI والصلاحيات وخارطة الطريق
 - [ ] اعتماد Phase 1 قبل بدء تغييرات قاعدة البيانات والخادم
+
+- [ ] Phase 1 Final Review: تدقيق قاعدة البيانات وحالات الطلبات والمال والأمان والتكاملات والبنية التحتية
+- [ ] مقارنة التصميم المقترح بالمشروع الحالي وتحديد EXISTS/MISSING/CONFLICT/NEEDS CHANGE
+- [ ] إعداد تقرير Phase 2 بالتفصيل والتوقف بانتظار موافقة المستخدم قبل أي Migration
+
+- [x] Phase 2 Development-Only: تنفيذ Customer → Driver → Order محلياً باستخدام Mock Providers فقط
+- [x] عدم تعديل MySQL أو Production Database وعدم ربط خدمات مدفوعة قبل موافقة لاحقة
+- [x] انتظار موافقة المستخدم على خطة Phase 2 قبل كتابة أي كود
+- [x] اعتماد آلة الحالات: PENDING → SEARCHING_DRIVER → DRIVER_ASSIGNED → DRIVER_ACCEPTED → DRIVER_ARRIVED → PICKED_UP → IN_DELIVERY → DELIVERED، مع CANCELLED وFAILED كحالات إنهاء مسموحة
+- [x] تحديد انتقالات CANCELLED وFAILED وصلاحيات Customer وDriver وAdmin وSystem قبل التنفيذ
+- [x] اعتماد خيار Demo Merchant: خيار أ، السائق ينفذ DRIVER_ARRIVED → PICKED_UP مؤقتاً دون شاشة تاجر
+- [x] تنفيذ آلة الحالات المستقلة ذات 10 حالات أساسية مع CANCELLED وFAILED ورفض الانتقالات غير المعرفة
+- [x] إنشاء تخزين Demo محلي منفصل مع سجل order status history لكل انتقال
+- [x] إنشاء Mock Wallet Ledger منفصل وعدم استخدام lib/wallet.ts أو تعديل الرصيد مباشرة
+- [x] توثيق أن قفل الرحلة الواحدة فحص منطقي محلي غير ذري ومخصص للـDemo فقط

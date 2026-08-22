@@ -10,53 +10,70 @@ export type OrderStatus =
   | "CANCELLED"
   | "FAILED";
 
-export type OrderActor = "customer" | "driver" | "merchant" | "admin";
+export type OrderActor = "customer" | "driver" | "merchant" | "admin" | "system";
 
-const transitions: Record<OrderStatus, readonly OrderStatus[]> = {
-  PENDING: ["SEARCHING_DRIVER", "CANCELLED", "FAILED"],
-  SEARCHING_DRIVER: ["DRIVER_ASSIGNED", "CANCELLED", "FAILED"],
-  DRIVER_ASSIGNED: ["DRIVER_ACCEPTED", "CANCELLED", "FAILED"],
-  DRIVER_ACCEPTED: ["DRIVER_ARRIVED", "CANCELLED", "FAILED"],
-  DRIVER_ARRIVED: ["PICKED_UP", "CANCELLED", "FAILED"],
-  PICKED_UP: ["IN_DELIVERY", "FAILED"],
-  IN_DELIVERY: ["DELIVERED", "FAILED"],
-  DELIVERED: [],
-  CANCELLED: [],
-  FAILED: [],
+export type TransitionCondition =
+  | "order_created"
+  | "driver_search_started"
+  | "driver_assigned"
+  | "assigned_driver_only"
+  | "driver_arrived"
+  | "pickup_confirmed"
+  | "delivery_started"
+  | "delivery_confirmed"
+  | "customer_or_operator_cancellation"
+  | "operator_failure";
+
+export type OrderTransition = {
+  from: OrderStatus;
+  to: OrderStatus;
+  allowedActors: readonly OrderActor[];
+  condition: TransitionCondition;
 };
 
-const allowedActors: Record<string, readonly OrderActor[]> = {
-  "PENDING:SEARCHING_DRIVER": ["admin"],
-  "PENDING:CANCELLED": ["customer", "admin"],
-  "PENDING:FAILED": ["admin"],
-  "SEARCHING_DRIVER:DRIVER_ASSIGNED": ["admin"],
-  "SEARCHING_DRIVER:CANCELLED": ["customer", "admin"],
-  "SEARCHING_DRIVER:FAILED": ["admin"],
-  "DRIVER_ASSIGNED:DRIVER_ACCEPTED": ["driver"],
-  "DRIVER_ASSIGNED:CANCELLED": ["customer", "driver", "admin"],
-  "DRIVER_ASSIGNED:FAILED": ["admin"],
-  "DRIVER_ACCEPTED:DRIVER_ARRIVED": ["driver"],
-  "DRIVER_ACCEPTED:CANCELLED": ["customer", "driver", "admin"],
-  "DRIVER_ACCEPTED:FAILED": ["admin"],
-  "DRIVER_ARRIVED:PICKED_UP": ["driver"],
-  "DRIVER_ARRIVED:CANCELLED": ["customer", "driver", "admin"],
-  "DRIVER_ARRIVED:FAILED": ["admin"],
-  "PICKED_UP:IN_DELIVERY": ["driver"],
-  "PICKED_UP:FAILED": ["admin"],
-  "IN_DELIVERY:DELIVERED": ["driver"],
-  "IN_DELIVERY:FAILED": ["admin"],
-};
+const transitionList: readonly OrderTransition[] = [
+  { from: "PENDING", to: "SEARCHING_DRIVER", allowedActors: ["system", "admin"], condition: "driver_search_started" },
+  { from: "SEARCHING_DRIVER", to: "DRIVER_ASSIGNED", allowedActors: ["system", "admin"], condition: "driver_assigned" },
+  { from: "DRIVER_ASSIGNED", to: "DRIVER_ACCEPTED", allowedActors: ["driver"], condition: "assigned_driver_only" },
+  { from: "DRIVER_ACCEPTED", to: "DRIVER_ARRIVED", allowedActors: ["driver"], condition: "driver_arrived" },
+  // Phase 2 Option A: Demo-only simplification; the driver confirms pickup directly.
+  { from: "DRIVER_ARRIVED", to: "PICKED_UP", allowedActors: ["driver"], condition: "pickup_confirmed" },
+  { from: "PICKED_UP", to: "IN_DELIVERY", allowedActors: ["driver"], condition: "delivery_started" },
+  { from: "IN_DELIVERY", to: "DELIVERED", allowedActors: ["driver", "customer"], condition: "delivery_confirmed" },
+  { from: "PENDING", to: "CANCELLED", allowedActors: ["customer", "admin", "system"], condition: "customer_or_operator_cancellation" },
+  { from: "SEARCHING_DRIVER", to: "CANCELLED", allowedActors: ["customer", "admin", "system"], condition: "customer_or_operator_cancellation" },
+  { from: "DRIVER_ASSIGNED", to: "CANCELLED", allowedActors: ["customer", "driver", "admin"], condition: "customer_or_operator_cancellation" },
+  { from: "DRIVER_ACCEPTED", to: "CANCELLED", allowedActors: ["customer", "driver", "admin"], condition: "customer_or_operator_cancellation" },
+  { from: "DRIVER_ARRIVED", to: "CANCELLED", allowedActors: ["customer", "driver", "admin"], condition: "customer_or_operator_cancellation" },
+  { from: "PENDING", to: "FAILED", allowedActors: ["system", "admin"], condition: "operator_failure" },
+  { from: "SEARCHING_DRIVER", to: "FAILED", allowedActors: ["system", "admin"], condition: "operator_failure" },
+  { from: "DRIVER_ASSIGNED", to: "FAILED", allowedActors: ["system", "admin"], condition: "operator_failure" },
+  { from: "DRIVER_ACCEPTED", to: "FAILED", allowedActors: ["system", "admin"], condition: "operator_failure" },
+  { from: "DRIVER_ARRIVED", to: "FAILED", allowedActors: ["system", "admin"], condition: "operator_failure" },
+  { from: "PICKED_UP", to: "FAILED", allowedActors: ["system", "admin"], condition: "operator_failure" },
+  { from: "IN_DELIVERY", to: "FAILED", allowedActors: ["system", "admin"], condition: "operator_failure" },
+];
 
-export function canTransition(
-  from: OrderStatus,
-  to: OrderStatus,
-  actor: OrderActor,
-): boolean {
-  return transitions[from].includes(to) && allowedActors[`${from}:${to}`]?.includes(actor) === true;
+const transitionMap = new Map(transitionList.map((rule) => [`${rule.from}:${rule.to}`, rule]));
+
+export function getTransition(from: OrderStatus, to: OrderStatus): OrderTransition | null {
+  return transitionMap.get(`${from}:${to}`) ?? null;
+}
+
+export function canTransition(from: OrderStatus, to: OrderStatus, actor: OrderActor): boolean {
+  return getTransition(from, to)?.allowedActors.includes(actor) ?? false;
+}
+
+export function assertTransition(from: OrderStatus, to: OrderStatus, actor: OrderActor): OrderTransition {
+  const rule = getTransition(from, to);
+  if (!rule || !rule.allowedActors.includes(actor)) {
+    throw new Error(`Illegal order transition: ${from} -> ${to} by ${actor}`);
+  }
+  return rule;
 }
 
 export function getAllowedTransitions(status: OrderStatus): readonly OrderStatus[] {
-  return transitions[status];
+  return transitionList.filter((rule) => rule.from === status).map((rule) => rule.to);
 }
 
 export type LegacyOrderStatus = "preparing" | "on_the_way" | "delivered";
