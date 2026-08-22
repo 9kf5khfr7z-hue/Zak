@@ -218,3 +218,9 @@ subtotal + baseFare + distanceFee + waitingFee + additionalFees
 ## 11. حدود هذه المرحلة
 
 هذه الوثيقة تطبق **مرحلة التخطيط المعماري** من الملف داخل مشروع ZAK، ولا تدّعي أن التكاملات الخارجية مثل WhatsApp OTP، GPS الخلفي، مزود الدفع، FCM، أو TestFlight أصبحت إنتاجية. سيتم تنفيذ كل مرحلة على حدة، مع اختبارها وتوثيق ملفاتها قبل الانتقال للمرحلة التالية.
+
+## 12. قرار Phase 2: Merchant Backend-only
+
+في **Phase 2 Development-Only**، يكون دور Merchant **Backend-only**. لا توجد شاشة Merchant، ولا يوجد Merchant route أو Merchant UI component ضمن واجهة التطبيق في هذه المرحلة. واجهة التاجر مؤجلة إلى مرحلة مستقبلية مستقلة بعد اعتماد نطاقها واختبارها.
+
+التدفق التجريبي الأساسي الحالي هو **Customer → Order → Driver**. وجود Merchant كدور أو Permission مذكور في التصميم الخلفي لا يعني وجود واجهة Merchant؛ فالـRole والـPermission يصفان نموذج الصلاحيات، بينما الشاشة والـroute يمثلان واجهة مستخدم منفصلة وغير موجودة في Phase 2.

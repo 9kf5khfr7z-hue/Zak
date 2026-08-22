@@ -30,6 +30,9 @@ jobs:
       - name: Lint and TypeScript check
         run: pnpm lint && pnpm check
 
+      - name: Merchant UI architecture guard
+        run: pnpm test -- tests/merchant-ui-guard.test.ts
+
       - name: Tests
         run: pnpm test
 

@@ -236,3 +236,7 @@
 - [x] إضافة اختبار Architecture/Guard يمنع وجود Merchant UI route أو component في Phase 2
 - [x] تشغيل جميع الاختبارات وTypeScript وlint وbuild دون تعديل business logic
 - [x] حفظ checkpoint لاختبار الحماية المعمارية الجديد
+- [x] جعل tests/merchant-ui-guard.test.ts إلزامياً ضمن CI الموجود قبل أي merge
+- [x] توثيق Merchant = Backend-only في وثيقة Architecture الحالية
+- [x] تشغيل tests وTypeScript وlint وbuild والتحقق من صحة CI configuration
+- [x] حفظ checkpoint لتعديل CI والتوثيق فقط
