@@ -217,3 +217,8 @@
 - [x] إزالة تحذير MODULE_TYPELESS_PACKAGE_JSON دون إضافة type: module الذي قد يكسر ملفات CommonJS
 - [x] تشغيل lint وTypeScript وجميع الاختبارات بعد إصلاح إعداد ESLint
 - [x] حفظ checkpoint جديد لإعداد ESLint المراجع
+- [x] استبدال pointerEvents المباشر في app/location.tsx بصيغة style.pointerEvents
+- [x] إضافة pnpm lint && pnpm check إلى مسار CI قبل أي build أو APK
+- [x] تشغيل pnpm lint وpnpm check وpnpm test والتحقق من سجلات التشغيل
+- [ ] مراجعة عدم ظهور تحذير props.pointerEvents is deprecated في السجلات
+- [ ] حفظ checkpoint جاهز لإنشاء APK Preview عبر واجهة المشروع

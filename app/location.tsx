@@ -32,7 +32,7 @@ export default function LocationScreen() {
 
       <View style={styles.mapWrap}>
         <LocationMap initialRegion={initialRegion} region={region} onRegionChangeComplete={setRegion} />
-        <View pointerEvents="none" style={styles.centerPin}>
+        <View style={[styles.centerPin, { pointerEvents: "none" }]}>
           <View style={styles.pinHalo}><IconSymbol name="location.fill" size={30} color="#111111" /></View>
         </View>
         <View style={[styles.mapControls, { backgroundColor: colors.surface }]}>
