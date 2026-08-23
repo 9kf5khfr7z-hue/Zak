@@ -240,3 +240,8 @@
 - [x] توثيق Merchant = Backend-only في وثيقة Architecture الحالية
 - [x] تشغيل tests وTypeScript وlint وbuild والتحقق من صحة CI configuration
 - [x] حفظ checkpoint لتعديل CI والتوثيق فقط
+- [ ] تشخيص وإصلاح فشل تحميل رابط معاينة ZAK على iPhone؛ الصفحة الحالية تُرجع Cannot GET / قبل بدء الاختبار (Web فقط، لا تغيير كود قبل اعتماد الإصلاح)
+- [ ] تشخيص خطأ Demo driver already has an active trip عند ضغط Customer على إنشاء طلب، دون إصلاح أو تغيير Driver Lock أو Order State Machine
+- [ ] تشخيص قراءة فقط لزر «مسح Demo» ومحتوى AsyncStorage/localStorage وعدد Demo Orders قبل/بعد المسح
+- [ ] تحقيق READ-ONLY لمسار createDemoOrder → startDemoDispatch → getDemoActiveDriverOrder وتحديد duplicate invocation أو stale storage أو logic bug
+- [x] تطبيق محتوى Pasted_content_06.txt على مشروع ZAK بعد مراجعته، مع الحفاظ على قيود Phase 2 وعدم تعديل قاعدة البيانات أو منطق الطلب والقفل إلا بتفويض صريح
