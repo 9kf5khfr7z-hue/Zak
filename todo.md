@@ -258,3 +258,6 @@
 - [x] إضافة Hard Reset للتخزين التجريبي في Development فقط لمسح مفاتيح Demo القديمة
 - [x] استبدال Uncaught Error برسالة واجهة واضحة عند وجود رحلة Demo نشطة
 - [x] إضافة اختبارات Hard Reset وإنشاء الطلب بعده
+
+- [x] إصلاح Demo Flow لمنع محاولة الانتقال المباشر من PENDING إلى DRIVER_ACCEPTED، وإجبار SEARCHING_DRIVER ثم DRIVER_ASSIGNED أولاً
+- [x] إضافة اختبار لتسلسل قبول السائق القانوني من PENDING حتى DRIVER_ACCEPTED

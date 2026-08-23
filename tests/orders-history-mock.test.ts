@@ -31,6 +31,18 @@ describe("orders-history-mock.test.ts", () => {
     expect((await getDemoOrders()).map((item) => item.id)).toEqual([second.id, first.id]);
   });
 
+  it("requires assignment before driver acceptance", async () => {
+    const order = await createDemoOrder();
+    await expect(transitionDemoOrder(order.id, "DRIVER_ACCEPTED", "driver")).rejects.toThrow("Illegal order transition");
+
+    const assigned = await startDemoDispatch(order.id);
+    const accepted = await transitionDemoOrder(assigned.id, "DRIVER_ACCEPTED", "driver");
+    expect(accepted.status).toBe("DRIVER_ACCEPTED");
+    expect(accepted.history.map((item) => item.status)).toEqual([
+      "PENDING", "SEARCHING_DRIVER", "DRIVER_ASSIGNED", "DRIVER_ACCEPTED",
+    ]);
+  });
+
   it("blocks two concurrent trips for the same demo driver", async () => {
     const first = await createDemoOrder();
     const second = await createDemoOrder();
