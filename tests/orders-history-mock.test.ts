@@ -38,4 +38,14 @@ describe("orders-history-mock.test.ts", () => {
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
     expect((await getDemoOrders()).filter((item) => item.driverId === "driver-demo-001")).toHaveLength(1);
   });
+
+  it("does not allow a dispatch write to reappear after a concurrent reset", async () => {
+    const order = await createDemoOrder();
+    const resetPromise = resetDemoOrders();
+    const dispatchPromise = startDemoDispatch(order.id);
+
+    await resetPromise;
+    await expect(dispatchPromise).rejects.toThrow("Demo order not found");
+    expect(await getDemoOrders()).toEqual([]);
+  });
 });

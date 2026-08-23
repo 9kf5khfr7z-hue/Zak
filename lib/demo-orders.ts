@@ -25,6 +25,7 @@ const DEMO_DRIVER_ID = "driver-demo-001";
 let memoryStore: Record<string, string> = {};
 let dispatchInProgress = false;
 let orderSequence = 0;
+let mutationQueue: Promise<void> = Promise.resolve();
 
 async function readValue(key: string) {
   try { return await AsyncStorage.getItem(key); } catch { return memoryStore[key] ?? null; }
@@ -42,6 +43,13 @@ async function saveOrders(orders: DemoOrder[]) {
   await writeValue(ORDERS_KEY, JSON.stringify(orders));
 }
 
+/** Serialize local mutations so reset cannot race with a pending write. */
+function runMutation<T>(operation: () => Promise<T>): Promise<T> {
+  const result = mutationQueue.then(operation, operation);
+  mutationQueue = result.then(() => undefined, () => undefined);
+  return result;
+}
+
 export async function getDemoOrders(): Promise<DemoOrder[]> {
   try {
     const raw = await readValue(ORDERS_KEY);
@@ -56,31 +64,33 @@ export async function getDemoOrder(id: string): Promise<DemoOrder | null> {
   return (await getDemoOrders()).find((order) => order.id === id || order.orderNumber === id) ?? null;
 }
 
-export async function createDemoOrder(input?: Partial<Pick<DemoOrder, "customerName" | "address" | "items" | "total" | "payment">>) {
-  const now = new Date().toISOString();
-  const sequence = ++orderSequence;
-  const id = `demo-order-${Date.now()}-${sequence}`;
-  const order: DemoOrder = {
-    id,
-    orderNumber: `ZAK-D${String(Date.now()).slice(-6)}-${sequence}`,
-    customerName: input?.customerName ?? "زبون التجربة",
-    storeName: "مطعم زاك التجريبي",
-    address: input?.address ?? "طرابلس · عنوان تجريبي",
-    items: input?.items ?? [{ name: "وجبة زاك التجريبية", quantity: 1, price: 25 }],
-    total: input?.total ?? 30,
-    payment: input?.payment ?? "cash",
-    status: "PENDING",
-    driverId: null,
-    driverName: null,
-    createdAt: now,
-    updatedAt: now,
-    history: [{ status: "PENDING", actor: "customer", at: now }],
-  };
-  await saveOrders([order, ...(await getDemoOrders())]);
-  return order;
+export function createDemoOrder(input?: Partial<Pick<DemoOrder, "customerName" | "address" | "items" | "total" | "payment">>) {
+  return runMutation(async () => {
+    const now = new Date().toISOString();
+    const sequence = ++orderSequence;
+    const id = `demo-order-${Date.now()}-${sequence}`;
+    const order: DemoOrder = {
+      id,
+      orderNumber: `ZAK-D${String(Date.now()).slice(-6)}-${sequence}`,
+      customerName: input?.customerName ?? "زبون التجربة",
+      storeName: "مطعم زاك التجريبي",
+      address: input?.address ?? "طرابلس · عنوان تجريبي",
+      items: input?.items ?? [{ name: "وجبة زاك التجريبية", quantity: 1, price: 25 }],
+      total: input?.total ?? 30,
+      payment: input?.payment ?? "cash",
+      status: "PENDING",
+      driverId: null,
+      driverName: null,
+      createdAt: now,
+      updatedAt: now,
+      history: [{ status: "PENDING", actor: "customer", at: now }],
+    };
+    await saveOrders([order, ...(await getDemoOrders())]);
+    return order;
+  });
 }
 
-export async function transitionDemoOrder(id: string, to: OrderStatus, actor: OrderActor, driverId = DEMO_DRIVER_ID) {
+async function transitionDemoOrderUnsafe(id: string, to: OrderStatus, actor: OrderActor, driverId = DEMO_DRIVER_ID) {
   const orders = await getDemoOrders();
   const current = orders.find((order) => order.id === id || order.orderNumber === id);
   if (!current) throw new Error("Demo order not found");
@@ -94,17 +104,23 @@ export async function transitionDemoOrder(id: string, to: OrderStatus, actor: Or
   return updated;
 }
 
-export async function startDemoDispatch(id: string) {
-  if (dispatchInProgress) throw new Error("Demo driver is already processing another dispatch");
-  dispatchInProgress = true;
-  try {
-    if (await getDemoActiveDriverOrder()) throw new Error("Demo driver already has an active trip");
-    let order = await transitionDemoOrder(id, "SEARCHING_DRIVER", "system");
-    order = await transitionDemoOrder(order.id, "DRIVER_ASSIGNED", "system");
-    return order;
-  } finally {
-    dispatchInProgress = false;
-  }
+export function transitionDemoOrder(id: string, to: OrderStatus, actor: OrderActor, driverId = DEMO_DRIVER_ID) {
+  return runMutation(() => transitionDemoOrderUnsafe(id, to, actor, driverId));
+}
+
+export function startDemoDispatch(id: string) {
+  return runMutation(async () => {
+    if (dispatchInProgress) throw new Error("Demo driver is already processing another dispatch");
+    dispatchInProgress = true;
+    try {
+      if (await getDemoActiveDriverOrder()) throw new Error("Demo driver already has an active trip");
+      let order = await transitionDemoOrderUnsafe(id, "SEARCHING_DRIVER", "system");
+      order = await transitionDemoOrderUnsafe(order.id, "DRIVER_ASSIGNED", "system");
+      return order;
+    } finally {
+      dispatchInProgress = false;
+    }
+  });
 }
 
 export async function getDemoActiveDriverOrder(): Promise<DemoOrder | null> {
@@ -112,12 +128,23 @@ export async function getDemoActiveDriverOrder(): Promise<DemoOrder | null> {
   return orders.find((order) => order.driverId === DEMO_DRIVER_ID && ["DRIVER_ASSIGNED", "DRIVER_ACCEPTED", "DRIVER_ARRIVED", "PICKED_UP", "IN_DELIVERY"].includes(order.status)) ?? null;
 }
 
-export async function resetDemoOrders() {
-  await removeValue(ORDERS_KEY);
-  await removeValue(ACTIVE_DRIVER_KEY);
-  memoryStore = {};
-  dispatchInProgress = false;
-  orderSequence = 0;
+export function resetDemoOrders() {
+  return runMutation(async () => {
+    await removeValue(ORDERS_KEY);
+    await removeValue(ACTIVE_DRIVER_KEY);
+    memoryStore = {};
+    dispatchInProgress = false;
+    orderSequence = 0;
+
+    const remainingOrders = await getDemoOrders();
+    if (remainingOrders.length > 0) {
+      await writeValue(ORDERS_KEY, JSON.stringify([]));
+      const verifiedOrders = await getDemoOrders();
+      if (verifiedOrders.length > 0) {
+        throw new Error("تعذر مسح طلبات Demo القديمة من التخزين المحلي");
+      }
+    }
+  });
 }
 
 export { DEMO_DRIVER_ID };

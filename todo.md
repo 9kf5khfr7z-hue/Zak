@@ -246,5 +246,9 @@
 - [ ] تحقيق READ-ONLY لمسار createDemoOrder → startDemoDispatch → getDemoActiveDriverOrder وتحديد duplicate invocation أو stale storage أو logic bug
 - [x] تطبيق محتوى Pasted_content_06.txt على مشروع ZAK بعد مراجعته، مع الحفاظ على قيود Phase 2 وعدم تعديل قاعدة البيانات أو منطق الطلب والقفل إلا بتفويض صريح
 - [x] إضافة createInFlightRef لمنع تنفيذ createOrder مرتين بالتزامن في Demo Flow، ثم التحقق بالفحوصات
-- [ ] إضافة setIsCreating(false) داخل finally في createOrder لتحرير حالة التحميل بعد انتهاء العملية
-- [ ] إصلاح مرجع setIsCreating غير المعرّف الناتج عن إضافة finally، بتعريف الحالة وربطها بالزر دون تغيير منطق الطلب
+- [x] إضافة setIsCreating(false) داخل finally في createOrder لتحرير حالة التحميل بعد انتهاء العملية
+- [x] إصلاح مرجع setIsCreating غير المعرّف الناتج عن إضافة finally، بتعريف الحالة وربطها بالزر دون تغيير منطق الطلب
+- [x] فحص getDemoActiveDriverOrder وresetDemoOrders وstartDemoDispatch وtransitionDemoOrder قراءةً فقط وتوثيق سلوكها وتسلسلها
+
+- [x] إصلاح سباق resetDemoOrders/createDemoOrder الذي يعيد active trip في مختبر Phase 2 دون تعديل قاعدة البيانات أو آلة الحالات
+- [x] إضافة اختبار يمنع بقاء أو إعادة ظهور active trip بعد resetDemoOrders
