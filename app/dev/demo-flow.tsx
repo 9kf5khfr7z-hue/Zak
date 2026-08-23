@@ -52,6 +52,11 @@ export default function DemoFlowScreen() {
       setRole("customer");
       setFeedback(`تم إنشاء ${dispatched.orderNumber} وإسناده للسائق التجريبي.`);
       await refresh();
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "خطأ غير معروف";
+      setFeedback(reason.includes("active trip")
+        ? "تعذر إنشاء الطلب: توجد رحلة Demo نشطة. اضغطي «مسح Demo» ثم حاولي مرة أخرى."
+        : `تعذر إنشاء الطلب: ${reason}`);
     } finally {
       createInFlightRef.current = false;
       setIsCreating(false);

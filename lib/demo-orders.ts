@@ -39,6 +39,15 @@ async function removeValue(key: string) {
   try { await AsyncStorage.removeItem(key); } catch { delete memoryStore[key]; }
 }
 
+async function getDemoStorageKeys() {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    return keys.filter((key) => key.startsWith("zak_demo") || key.startsWith("demo_"));
+  } catch {
+    return [];
+  }
+}
+
 async function saveOrders(orders: DemoOrder[]) {
   await writeValue(ORDERS_KEY, JSON.stringify(orders));
 }
@@ -130,8 +139,9 @@ export async function getDemoActiveDriverOrder(): Promise<DemoOrder | null> {
 
 export function resetDemoOrders() {
   return runMutation(async () => {
-    await removeValue(ORDERS_KEY);
-    await removeValue(ACTIVE_DRIVER_KEY);
+    // Development-only hard reset: remove the current and legacy Demo keys on this device/origin.
+    const demoKeys = new Set([ORDERS_KEY, ACTIVE_DRIVER_KEY, ...(await getDemoStorageKeys())]);
+    for (const key of demoKeys) await removeValue(key);
     memoryStore = {};
     dispatchInProgress = false;
     orderSequence = 0;

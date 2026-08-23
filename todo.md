@@ -252,3 +252,9 @@
 
 - [x] إصلاح سباق resetDemoOrders/createDemoOrder الذي يعيد active trip في مختبر Phase 2 دون تعديل قاعدة البيانات أو آلة الحالات
 - [x] إضافة اختبار يمنع بقاء أو إعادة ظهور active trip بعد resetDemoOrders
+
+- [x] تشخيص استمرار Demo driver already has an active trip في نسخة Preview بعد checkpoint الإصلاح، وتحديد bundle قديم أو تخزين نشط أو استدعاء مكرر
+
+- [x] إضافة Hard Reset للتخزين التجريبي في Development فقط لمسح مفاتيح Demo القديمة
+- [x] استبدال Uncaught Error برسالة واجهة واضحة عند وجود رحلة Demo نشطة
+- [x] إضافة اختبارات Hard Reset وإنشاء الطلب بعده

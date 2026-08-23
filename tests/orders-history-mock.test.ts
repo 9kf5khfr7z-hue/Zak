@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { createDemoOrder, getDemoOrder, getDemoOrders, resetDemoOrders, startDemoDispatch, transitionDemoOrder } from "../lib/demo-orders";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createDemoOrder, getDemoActiveDriverOrder, getDemoOrder, getDemoOrders, resetDemoOrders, startDemoDispatch, transitionDemoOrder } from "../lib/demo-orders";
 
 beforeEach(async () => {
   await resetDemoOrders();
@@ -37,6 +38,37 @@ describe("orders-history-mock.test.ts", () => {
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
     expect((await getDemoOrders()).filter((item) => item.driverId === "driver-demo-001")).toHaveLength(1);
+  });
+
+  it("clears legacy Demo storage and allows a fresh dispatch", async () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => { storage.set(key, value); },
+        removeItem: (key: string) => { storage.delete(key); },
+        clear: () => { storage.clear(); },
+        key: (index: number) => [...storage.keys()][index] ?? null,
+        get length() { return storage.size; },
+      },
+    });
+
+    try {
+      const order = await createDemoOrder();
+      await startDemoDispatch(order.id);
+      await AsyncStorage.setItem("zak_demo_orders_legacy", JSON.stringify([{ ...order, driverId: "driver-demo-001", status: "IN_DELIVERY" }]));
+
+      await resetDemoOrders();
+
+      expect(await getDemoOrders()).toEqual([]);
+      expect(await getDemoActiveDriverOrder()).toBeNull();
+      expect((await AsyncStorage.getAllKeys()).filter((key) => key.startsWith("zak_demo") || key.startsWith("demo_"))).toEqual([]);
+
+      const fresh = await createDemoOrder();
+      await expect(startDemoDispatch(fresh.id)).resolves.toMatchObject({ id: fresh.id, status: "DRIVER_ASSIGNED" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("does not allow a dispatch write to reappear after a concurrent reset", async () => {
