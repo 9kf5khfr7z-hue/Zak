@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
@@ -23,6 +23,7 @@ export default function DemoFlowScreen() {
   const [orders, setOrders] = useState<DemoOrder[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [feedback, setFeedback] = useState("");
+  const createInFlightRef = useRef(false);
 
   const refresh = useCallback(async () => {
     const all = await getDemoOrders();
@@ -34,15 +35,24 @@ export default function DemoFlowScreen() {
   useEffect(() => { void refresh(); }, [refresh]);
 
   const createOrder = async () => {
-    const created = await createDemoOrder();
-    const dispatched = await startDemoDispatch(created.id);
-    await chargeMockPayment(dispatched.total, dispatched.orderNumber);
-    await addMockLedgerEntry("ORDER_PAYMENT", dispatched.total, dispatched.orderNumber);
-    await sendMockWhatsApp("+218000000000", `طلب تجريبي ${dispatched.orderNumber}`);
-    setOrder(dispatched);
-    setRole("customer");
-    setFeedback(`تم إنشاء ${dispatched.orderNumber} وإسناده للسائق التجريبي.`);
-    await refresh();
+    if (createInFlightRef.current) {
+      return;
+    }
+
+    createInFlightRef.current = true;
+    try {
+      const created = await createDemoOrder();
+      const dispatched = await startDemoDispatch(created.id);
+      await chargeMockPayment(dispatched.total, dispatched.orderNumber);
+      await addMockLedgerEntry("ORDER_PAYMENT", dispatched.total, dispatched.orderNumber);
+      await sendMockWhatsApp("+218000000000", `طلب تجريبي ${dispatched.orderNumber}`);
+      setOrder(dispatched);
+      setRole("customer");
+      setFeedback(`تم إنشاء ${dispatched.orderNumber} وإسناده للسائق التجريبي.`);
+      await refresh();
+    } finally {
+      createInFlightRef.current = false;
+    }
   };
 
   const advance = async (status: OrderStatus) => {

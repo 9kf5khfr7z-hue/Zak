@@ -245,3 +245,4 @@
 - [ ] تشخيص قراءة فقط لزر «مسح Demo» ومحتوى AsyncStorage/localStorage وعدد Demo Orders قبل/بعد المسح
 - [ ] تحقيق READ-ONLY لمسار createDemoOrder → startDemoDispatch → getDemoActiveDriverOrder وتحديد duplicate invocation أو stale storage أو logic bug
 - [x] تطبيق محتوى Pasted_content_06.txt على مشروع ZAK بعد مراجعته، مع الحفاظ على قيود Phase 2 وعدم تعديل قاعدة البيانات أو منطق الطلب والقفل إلا بتفويض صريح
+- [x] إضافة createInFlightRef لمنع تنفيذ createOrder مرتين بالتزامن في Demo Flow، ثم التحقق بالفحوصات
