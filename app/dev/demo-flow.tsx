@@ -7,6 +7,7 @@ import { createDemoOrder, getDemoOrders, resetDemoOrders, startDemoDispatch, tra
 import { orderStatusLabels, type OrderStatus } from "@/shared/order-state";
 import { chargeMockPayment, sendMockWhatsApp } from "@/lib/providers/mock";
 import { addMockLedgerEntry, getMockWallet, resetMockWallet } from "@/lib/providers/mock/wallet-mock";
+import { recordCustomerRefusalReview } from "@/lib/finance";
 
 const driverSteps: { status: OrderStatus; label: string }[] = [
   { status: "DRIVER_ACCEPTED", label: "قبول الطلب" },
@@ -89,6 +90,24 @@ export default function DemoFlowScreen() {
     }
   };
 
+  const reportCustomerRefusal = async () => {
+    if (!current || current.status !== "IN_DELIVERY" || !current.driverId || !current.driverName) return;
+    try {
+      await recordCustomerRefusalReview({
+        orderId: current.id,
+        orderNumber: current.orderNumber,
+        driverId: current.driverId,
+        driverName: current.driverName,
+      });
+      const failed = await transitionDemoOrder(current.id, "FAILED", "system");
+      setOrder(failed);
+      setFeedback("تم تسجيل رفض الزبون. حق التوصيل قيد تحديد الشركة، والطلب يحتاج متابعة من الشركة.");
+      await refresh();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "تعذر تسجيل رفض الزبون");
+    }
+  };
+
   const reset = async () => {
     await resetDemoOrders();
     await resetMockWallet();
@@ -122,7 +141,7 @@ export default function DemoFlowScreen() {
       <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.notice, { backgroundColor: "#FFF9D6", borderColor: "#FFD21F" }]}><Text style={styles.noticeTitle}>محاكاة محلية فقط</Text><Text style={styles.noticeText}>لا يوجد دفع حقيقي ولا رسائل حقيقية ولا تعديل على قاعدة البيانات.</Text></View>
         <View style={styles.roleRow}><Pressable onPress={() => setRole("driver")} style={[styles.role, { backgroundColor: role === "driver" ? "#111111" : colors.surface, borderColor: colors.border }]}><Text style={{ color: role === "driver" ? "#FFFFFF" : colors.foreground, fontWeight: "900" }}>وضع المندوب</Text></Pressable><Pressable onPress={() => setRole("customer")} style={[styles.role, { backgroundColor: role === "customer" ? "#FFD21F" : colors.surface, borderColor: colors.border }]}><Text style={{ color: "#111111", fontWeight: "900" }}>وضع العميل</Text></Pressable></View>
-        {role === "customer" ? <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.cardTitle, { color: colors.foreground }]}>أنشئ طلباً تجريبياً</Text><Text style={[styles.cardText, { color: colors.muted }]}>سيتم إنشاء الطلب ثم تشغيل البحث عن مندوب وإسناده تلقائياً للسائق التجريبي.</Text><Pressable disabled={isCreating} onPress={() => void createOrder()} style={[styles.primary, isCreating && { opacity: 0.65 }]}><Text style={styles.primaryText}>{isCreating ? "جارٍ إنشاء الطلب..." : "إنشاء طلب Demo"}</Text></Pressable></View> : <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.cardTitle, { color: colors.foreground }]}>تحكم المندوب</Text>{current ? <>{current.status === "PENDING" ? <Pressable onPress={() => void assignDriver()} style={styles.primary}><Text style={styles.primaryText}>إسناد الطلب للسائق</Text></Pressable> : null}{driverSteps.map((step) => { const enabled = current.status === step.status || driverSteps.findIndex((item) => item.status === current.status) + 1 === driverSteps.findIndex((item) => item.status === step.status); const done = current.history.some((item) => item.status === step.status); return <Pressable key={step.status} onLayout={(event) => { stepOffsetsRef.current[step.status] = event.nativeEvent.layout.y; }} disabled={!enabled || done} onPress={() => void advance(step.status)} style={[styles.step, { backgroundColor: done ? "#DCFCE7" : enabled ? "#FFF9D6" : colors.background, borderColor: done ? "#86EFAC" : enabled ? "#FFD21F" : colors.border }]}><Text style={[styles.stepText, { color: colors.foreground }]}>{step.label}</Text><Text style={[styles.stepStatus, { color: done ? "#15803D" : colors.muted }]}>{done ? "تم" : enabled ? "تنفيذ" : "مقفل"}</Text></Pressable>; })}</> : <Text style={[styles.cardText, { color: colors.muted }]}>أنشئ طلباً من وضع العميل أولاً.</Text>}</View>}
+        {role === "customer" ? <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.cardTitle, { color: colors.foreground }]}>أنشئ طلباً تجريبياً</Text><Text style={[styles.cardText, { color: colors.muted }]}>سيتم إنشاء الطلب ثم تشغيل البحث عن مندوب وإسناده تلقائياً للسائق التجريبي.</Text><Pressable disabled={isCreating} onPress={() => void createOrder()} style={[styles.primary, isCreating && { opacity: 0.65 }]}><Text style={styles.primaryText}>{isCreating ? "جارٍ إنشاء الطلب..." : "إنشاء طلب Demo"}</Text></Pressable></View> : <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.cardTitle, { color: colors.foreground }]}>تحكم المندوب</Text>{current ? <>{current.status === "PENDING" ? <Pressable onPress={() => void assignDriver()} style={styles.primary}><Text style={styles.primaryText}>إسناد الطلب للسائق</Text></Pressable> : null}{driverSteps.map((step) => { const enabled = current.status === step.status || driverSteps.findIndex((item) => item.status === current.status) + 1 === driverSteps.findIndex((item) => item.status === step.status); const done = current.history.some((item) => item.status === step.status); return <Pressable key={step.status} onLayout={(event) => { stepOffsetsRef.current[step.status] = event.nativeEvent.layout.y; }} disabled={!enabled || done} onPress={() => void advance(step.status)} style={[styles.step, { backgroundColor: done ? "#DCFCE7" : enabled ? "#FFF9D6" : colors.background, borderColor: done ? "#86EFAC" : enabled ? "#FFD21F" : colors.border }]}><Text style={[styles.stepText, { color: colors.foreground }]}>{step.label}</Text><Text style={[styles.stepStatus, { color: done ? "#15803D" : colors.muted }]}>{done ? "تم" : enabled ? "تنفيذ" : "مقفل"}</Text></Pressable>; })}{current.status === "IN_DELIVERY" ? <Pressable onPress={() => void reportCustomerRefusal()} style={[styles.secondary, { borderColor: "#F97316" }]}><Text style={{ color: "#C2410C", fontWeight: "900" }}>الزبون رفض الاستلام</Text></Pressable> : null}</> : <Text style={[styles.cardText, { color: colors.muted }]}>أنشئ طلباً من وضع العميل أولاً.</Text>}</View>}
         {current ? <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}><View style={styles.orderTop}><Text style={[styles.cardTitle, { color: colors.foreground }]}>{current.orderNumber}</Text><Text style={styles.statusPill}>{orderStatusLabels.ar[current.status]}</Text></View><Text style={[styles.cardText, { color: colors.muted }]}>{current.storeName} · {current.address}</Text><Text style={[styles.cardText, { color: colors.muted }]}>سجل الحالات: {current.history.length} · المحفظة التجريبية: {walletBalance.toFixed(2)} د.ل</Text><View style={styles.history}>{current.history.map((item) => <View key={`${item.status}-${item.at}`} style={styles.historyRow}><Text style={[styles.cardText, { color: colors.muted }]}>{new Date(item.at).toLocaleTimeString("ar-LY", { hour: "2-digit", minute: "2-digit" })}</Text><Text style={[styles.historyStatus, { color: colors.foreground }]}>{orderStatusLabels.ar[item.status]}</Text></View>)}</View></View> : null}
         {feedback ? <Text style={[styles.feedback, { color: feedback.includes("تعذر") || feedback.includes("Illegal") ? "#B91C1C" : "#15803D" }]}>{feedback}</Text> : null}
         <View style={styles.footerActions}><Pressable onPress={() => void refresh()} style={[styles.secondary, { borderColor: colors.border }]}><Text style={{ color: colors.foreground, fontWeight: "900" }}>تحديث</Text></Pressable><Pressable onPress={() => void reset()} style={[styles.secondary, { borderColor: colors.border }]}><Text style={{ color: "#B91C1C", fontWeight: "900" }}>مسح Demo</Text></Pressable></View>

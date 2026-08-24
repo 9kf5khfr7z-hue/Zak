@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createDemoOrder, getDemoActiveDriverOrder, getDemoOrder, getDemoOrders, resetDemoOrders, startDemoDispatch, transitionDemoOrder } from "../lib/demo-orders";
+import { getCancellationRecords, getCustodyEntries, recordCustomerRefusalReview } from "../lib/finance";
 
 beforeEach(async () => {
   await resetDemoOrders();
@@ -41,6 +42,51 @@ describe("orders-history-mock.test.ts", () => {
     expect(accepted.history.map((item) => item.status)).toEqual([
       "PENDING", "SEARCHING_DRIVER", "DRIVER_ASSIGNED", "DRIVER_ACCEPTED",
     ]);
+  });
+
+  it("records customer refusal after pickup as pending driver delivery fee without charging order value", async () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => { storage.set(key, value); },
+        removeItem: (key: string) => { storage.delete(key); },
+        clear: () => { storage.clear(); },
+        key: (index: number) => [...storage.keys()][index] ?? null,
+        get length() { return storage.size; },
+      },
+    });
+
+    try {
+      await AsyncStorage.removeItem("zak_driver_custody_v1");
+      await AsyncStorage.removeItem("zak_cancellations_v1");
+      let order = await createDemoOrder({ total: 30 });
+    order = await startDemoDispatch(order.id);
+    for (const status of ["DRIVER_ACCEPTED", "DRIVER_ARRIVED", "PICKED_UP", "IN_DELIVERY"] as const) {
+      order = await transitionDemoOrder(order.id, status, "driver");
+    }
+
+    const review = await recordCustomerRefusalReview({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      driverId: order.driverId!,
+      driverName: order.driverName!,
+    });
+    const failed = await transitionDemoOrder(order.id, "FAILED", "system");
+
+    expect(failed.status).toBe("FAILED");
+    expect(review.cancellation.reviewStatus).toBe("pending_company_review");
+    expect(review.cancellation.deliveryFeeDue).toBeNull();
+    expect(review.custody.type).toBe("cancellation_fee");
+    expect(review.custody.direction).toBe("driver_due");
+    expect(review.custody.amount).toBeNull();
+    expect(review.custody.reason).toContain("قيد تحديد الشركة");
+    expect((await getCustodyEntries()).filter((entry) => entry.orderId === order.id)).toHaveLength(1);
+    expect((await getCancellationRecords()).filter((record) => record.orderId === order.id)).toHaveLength(1);
+      expect((await getDemoActiveDriverOrder())).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("blocks two concurrent trips for the same demo driver", async () => {
