@@ -1,5 +1,87 @@
 export type PushSeverity = "HIGH" | "CRITICAL";
 
+export type OneSignalCredentialHealthStatus =
+  | "HEALTHY"
+  | "UNAUTHORIZED"
+  | "NOT_FOUND"
+  | "MISMATCH"
+  | "ERROR";
+
+export type OneSignalCredentialHealthResult = {
+  status: OneSignalCredentialHealthStatus;
+  appId?: string;
+  latencyMs?: number;
+  detail?: string;
+};
+
+export type CredentialHealthCheckOptions = {
+  fetcher?: typeof fetch;
+  timeoutMs?: number;
+};
+
+const OFFICIAL_ONESIGNAL_API_BASE = "https://api.onesignal.com";
+const SENSITIVE_ERROR_TEXT = "OneSignal credential health check failed";
+
+/**
+ * Read-only credential check. It calls GET /apps/{app_id}?view=config only.
+ * It deliberately does not depend on PUSH_ENABLED, because checking credentials
+ * must be possible while production delivery remains disabled.
+ */
+export async function checkOneSignalCredentials(
+  config: Pick<ProductionPushProviderConfig, "apiKey" | "appId">,
+  options: CredentialHealthCheckOptions = {},
+): Promise<OneSignalCredentialHealthResult> {
+  if (!config.apiKey || !config.appId) {
+    return { status: "ERROR", detail: "OneSignal credentials are not configured" };
+  }
+
+  const startedAt = Date.now();
+  const fetcher = options.fetcher ?? fetch;
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetcher(
+      `${OFFICIAL_ONESIGNAL_API_BASE}/apps/${encodeURIComponent(config.appId)}?view=config`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Key ${config.apiKey}`,
+          "content-type": "application/json",
+        },
+        signal: controller.signal,
+      },
+    );
+
+    const latencyMs = Date.now() - startedAt;
+    if (response.status === 401 || response.status === 403) {
+      return { status: "UNAUTHORIZED", latencyMs, detail: "OneSignal rejected the App API key" };
+    }
+    if (response.status === 404) {
+      return { status: "NOT_FOUND", latencyMs, detail: "OneSignal app was not found" };
+    }
+    if (response.status === 400) {
+      return { status: "MISMATCH", latencyMs, detail: "OneSignal rejected the App ID" };
+    }
+    if (!response.ok) {
+      return { status: "ERROR", latencyMs, detail: `OneSignal health check returned HTTP ${response.status}` };
+    }
+
+    const payload = (await response.json()) as { id?: unknown };
+    if (payload.id !== config.appId) {
+      return { status: "MISMATCH", appId: typeof payload.id === "string" ? payload.id : undefined, latencyMs, detail: "OneSignal returned a different App ID" };
+    }
+    return { status: "HEALTHY", appId: config.appId, latencyMs };
+  } catch {
+    return { status: "ERROR", latencyMs: Date.now() - startedAt, detail: SENSITIVE_ERROR_TEXT };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export const ONE_SIGNAL_HEALTH_CHECK_ENDPOINT = `${OFFICIAL_ONESIGNAL_API_BASE}/apps/{app_id}?view=config`;
+
 export type PushAlert = {
   incidentId: string;
   severity: PushSeverity;

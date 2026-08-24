@@ -20,6 +20,8 @@ import {
   mockPushProvider,
   ProductionPushProvider,
   productionPushConfigFromEnv,
+  checkOneSignalCredentials,
+  ONE_SIGNAL_HEALTH_CHECK_ENDPOINT,
   resetPushProvider,
 } from "../server/_core/push-provider";
 import {
@@ -302,5 +304,58 @@ describe("pre-production retention and push hardening", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+});
+
+describe("OneSignal read-only credential health check", () => {
+  const config = {
+    appId: "123e4567-e89b-42d3-a456-426614174000",
+    apiKey: "os_v2_app_test_key",
+  };
+
+  it("returns HEALTHY from the read-only app endpoint and never calls the send endpoint", async () => {
+    const requests: string[] = [];
+    const result = await checkOneSignalCredentials(config, {
+      fetcher: (async (input, init) => {
+        requests.push(`${init?.method}:${String(input)}`);
+        return new Response(JSON.stringify({ id: config.appId }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }) as typeof fetch,
+    });
+
+    expect(result.status).toBe("HEALTHY");
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toContain("GET:https://api.onesignal.com/apps/");
+    expect(requests[0]).toContain("?view=config");
+    expect(requests[0]).not.toContain("/notifications");
+    expect(ONE_SIGNAL_HEALTH_CHECK_ENDPOINT).not.toContain("notifications");
+  });
+
+  it("maps authentication and app identity failures without exposing the API key", async () => {
+    const unauthorized = await checkOneSignalCredentials(config, {
+      fetcher: (async () => new Response(null, { status: 401 })) as typeof fetch,
+    });
+    const mismatch = await checkOneSignalCredentials(config, {
+      fetcher: (async () => new Response(JSON.stringify({ id: "different-app" }), { status: 200 })) as typeof fetch,
+    });
+
+    expect(unauthorized.status).toBe("UNAUTHORIZED");
+    expect(mismatch.status).toBe("MISMATCH");
+    expect(JSON.stringify({ unauthorized, mismatch })).not.toContain(config.apiKey);
+  });
+
+  it("returns NOT_FOUND or ERROR for unavailable services and sanitizes failures", async () => {
+    const notFound = await checkOneSignalCredentials(config, {
+      fetcher: (async () => new Response(null, { status: 404 })) as typeof fetch,
+    });
+    const error = await checkOneSignalCredentials(config, {
+      fetcher: (async () => { throw new Error(`network failure ${config.apiKey}`); }) as typeof fetch,
+    });
+
+    expect(notFound.status).toBe("NOT_FOUND");
+    expect(error.status).toBe("ERROR");
+    expect(error.detail).not.toContain(config.apiKey);
   });
 });

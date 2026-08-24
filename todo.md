@@ -385,7 +385,7 @@
 - [ ] تنفيذ Security Review نهائي بعد اعتماد الإعدادات الفعلية
 - [ ] توثيق خطة Rollout تدريجي وخطة rollback ومؤشرات المراقبة
 
-- [ ] OneSignal: إدخال App ID وApp API Key عبر Secret Manager فقط
+- [x] OneSignal: إدخال App ID وApp API Key عبر Secret Manager فقط
 - [x] OneSignal: إبقاء PUSH_ENABLED=false والتحقق من منع الإرسال الإنتاجي
 - [x] Final Security Gate: فحص Secrets والـpayload والـretry وعدم تسريب المفتاح
 - [x] Final Security Gate: تشغيل الاختبارات وTypeScript وlint وbuild
@@ -395,3 +395,14 @@
 - [x] التحقق من مسار `/admin` والنطاق الرئيسي بعد إصلاح النشر
 
 - [x] Final Security Gate بعد حفظ Secrets: التحقق من PUSH_ENABLED=false وتشغيل الفحوصات النهائية
+
+- [ ] Credential Test داخلي لـOneSignal دون إرسال عام مع إبقاء PUSH_ENABLED=false
+- [x] توثيق Rollout Plan بمراحل 5% و25% و50% و100% ومؤشرات المراقبة
+- [x] توثيق Rollback Plan وتعريف شروط الإيقاف وإعادة التفعيل
+- [ ] مراجعة Production Readiness النهائية دون تحويل PUSH_ENABLED إلى true
+
+- [x] تنفيذ OneSignal Credential Health Check للقراءة فقط باستخدام PUSH_PROJECT_ID وPUSH_API_KEY
+- [x] منع استدعاء أي endpoint إرسال أثناء Health Check وإخفاء Secrets من logs/errors
+- [x] تغطية HEALTHY وUNAUTHORIZED وNOT_FOUND/MISMATCH وERROR بالاختبارات
+- [x] تشغيل tests وTypeScript وlint وbuild بعد التنفيذ
+- [x] توثيق نتيجة Health Check مع بقاء PUSH_ENABLED=false
