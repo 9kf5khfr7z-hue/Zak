@@ -393,3 +393,5 @@
 
 - [x] تشخيص صفحة This site is under maintenance على النطاق المنشور وفتح لوحة مشرف الإدارة
 - [x] التحقق من مسار `/admin` والنطاق الرئيسي بعد إصلاح النشر
+
+- [x] Final Security Gate بعد حفظ Secrets: التحقق من PUSH_ENABLED=false وتشغيل الفحوصات النهائية
