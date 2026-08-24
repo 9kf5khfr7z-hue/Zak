@@ -60,11 +60,15 @@ async function startServer() {
     next();
   });
 
+  app.post(
+    "/api/errors/ingest",
+    express.json({ limit: "64kb" }),
+    createErrorIngestHandler((req) => sdk.authenticateRequest(req)),
+  );
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.use(createServerMonitoringMiddleware());
-
-  app.post("/api/errors/ingest", createErrorIngestHandler((req) => sdk.authenticateRequest(req)));
 
   app.post("/api/scheduled/error-retention", async (req, res) => {
     try {

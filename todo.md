@@ -359,3 +359,11 @@
 - [x] اختبار حذف السجلات المنتهية والحفاظ على الحديثة وفشل Job وإعادة المحاولة
 - [x] إضافة ProductionPushProvider خلف PushProvider مع إبقائه غير مفعّل
 - [x] التحقق من retries وtimeout وrate limiting وعدم تسريب credentials
+
+## Phase 3D — Security & Production Readiness
+
+- [x] إعداد Security Review مكتوب لمسار Client → Auth → Ingest → Validation → Redaction → Storage → Push
+- [x] مراجعة Secrets وProduction startup guard دون تفعيل ProductionPushProvider
+- [x] إضافة اختبار Retention متعدد الدورات في Development مع failure/retry
+- [x] التحقق من عزل الاختبارات عن Production وعدم استخدام بياناتها
+- [x] تشغيل الفحوصات النهائية وحفظ تقرير بوابة الإنتاج

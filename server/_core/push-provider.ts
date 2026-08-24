@@ -37,6 +37,24 @@ export type ProductionPushProviderConfig = {
   enabled?: boolean;
 };
 
+export function validateProductionPushConfig(
+  config: ProductionPushProviderConfig,
+): void {
+  if (!config.enabled) return;
+  if (!config.endpoint || !config.token) {
+    throw new Error("Production push provider requires endpoint and token secrets");
+  }
+  if (!/^https:\/\//i.test(config.endpoint)) {
+    throw new Error("Production push provider endpoint must use HTTPS");
+  }
+  if (!Number.isFinite(config.timeoutMs ?? 5000) || (config.timeoutMs ?? 5000) <= 0) {
+    throw new Error("Production push provider timeout must be positive");
+  }
+  if (!Number.isInteger(config.maxRetries ?? 2) || (config.maxRetries ?? 2) < 0) {
+    throw new Error("Production push provider maxRetries must be a non-negative integer");
+  }
+}
+
 /**
  * Production adapter kept dormant until an approved provider and credentials
  * are configured. It never logs the bearer token or response body.
@@ -48,6 +66,7 @@ export class ProductionPushProvider implements PushProvider {
   private readonly rateLimitMs: number;
 
   constructor(private readonly config: ProductionPushProviderConfig) {
+    validateProductionPushConfig(config);
     this.timeoutMs = config.timeoutMs ?? 5000;
     this.maxRetries = config.maxRetries ?? 2;
     this.rateLimitMs = config.rateLimitMs ?? 10 * 60 * 1000;
