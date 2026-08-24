@@ -7,7 +7,9 @@ import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { captureServerIncident, createServerMonitoringMiddleware, getServerMonitoringSnapshot, installServerErrorMonitoring } from "./error-monitoring";
+import { captureServerIncident, createServerMonitoringMiddleware, getServerMonitoringSnapshot, ingestServerIncident, installServerErrorMonitoring } from "./error-monitoring";
+import { runRetentionHeartbeat } from "./error-retention";
+import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -57,6 +59,50 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.use(createServerMonitoringMiddleware());
+
+  app.post("/api/errors/ingest", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      const body = req.body;
+      const payloadSize = Buffer.byteLength(JSON.stringify(body ?? {}), "utf8");
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        res.status(400).json({ accepted: false, error: "Invalid error payload" });
+        return;
+      }
+      if (payloadSize > 64 * 1024) {
+        res.status(413).json({ accepted: false, error: "Error payload is too large" });
+        return;
+      }
+      const incident = ingestServerIncident({
+        message: body.message,
+        source: body.source,
+        kind: body.kind,
+        severity: body.severity,
+        action: body.action,
+        requestId: body.requestId ?? req.headers["x-request-id"],
+        statusCode: body.statusCode,
+        stackTrace: body.stackTrace,
+      });
+      res.status(202).json({ accepted: true, incidentId: incident.id, userId: user.id });
+    } catch (error) {
+      const status = error instanceof Error && /session|auth|forbidden|invalid/i.test(error.message) ? 401 : 500;
+      res.status(status).json({ accepted: false, error: status === 401 ? "Authentication required" : "Unable to accept error event" });
+    }
+  });
+
+  app.post("/api/scheduled/error-retention", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron && user.role !== "admin") {
+        res.status(403).json({ ok: false, error: "Admin or scheduled-task authorization required" });
+        return;
+      }
+      const result = await runRetentionHeartbeat();
+      res.status(result.status === "SUCCESS" ? 200 : 500).json(result);
+    } catch (_error) {
+      res.status(401).json({ ok: false, error: "Scheduled-task authentication required" });
+    }
+  });
 
   if (process.env.NODE_ENV !== "production") {
     app.get("/api/dev/monitoring", (_req, res) => res.json(getServerMonitoringSnapshot()));

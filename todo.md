@@ -328,3 +328,11 @@
 - [x] ربط التقاط أخطاء السيرفر بتخزين دائم مع fallback محلي في Development فقط
 - [x] ضمان أن فشل التخزين لا يتحول إلى fallback صامت في Production
 - [x] إضافة اختبارات persistence وDevelopment fallback دون تنفيذ Migration أو تغيير قاعدة البيانات الفعلية
+
+## Phase 3A — Protected Ingest, Retention, and Push Adapter
+
+- [x] إضافة Protected Error Ingest للمستخدمين المصادقين مع تحقق payload وتنقيح البيانات الحساسة
+- [x] منع العميل من تحديد صلاحيات Admin أو حالة سجل الخطأ
+- [x] إضافة Retention Heartbeat يدوي بنتيجة تشغيل واضحة
+- [x] إضافة PushProvider وMockPushProvider مع قواعد HIGH/CRITICAL ومنع التكرار
+- [x] إضافة اختبارات Auth وRedaction وIngest وRetention وMock Push وFailure/Fallback

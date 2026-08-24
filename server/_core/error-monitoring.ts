@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { createHash } from "node:crypto";
 
 import { upsertErrorEvent } from "../db";
+import { getPushProvider } from "./push-provider";
 
 export type ServerSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type ServerIncident = {
@@ -32,7 +33,9 @@ let installed = false;
 
 function redact(value: string): string {
   return value
-    .replace(/(password|otp|token|authorization|card(number)?)\s*[:=]\s*[^\s,;]+/gi, "$1: [REDACTED]")
+    .replace(/authorization\s*:\s*bearer\s+[^\s,;]+/gi, "Authorization: Bearer [REDACTED]")
+    .replace(/(password|otp|token|authorization|cookie|card(number)?)\s*[:=]\s*[^\s,;]+/gi, "$1: [REDACTED]")
+    .replace(/bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED]")
     .slice(0, 12000);
 }
 
@@ -78,8 +81,62 @@ async function persistIncident(incident: ServerIncident): Promise<void> {
 function alertFor(incident: ServerIncident): void {
   if (incident.severity !== "HIGH" && incident.severity !== "CRITICAL") return;
   if (alerts.some((alert) => alert.incidentId === incident.id)) return;
-  alerts.unshift({ incidentId: incident.id, title: incident.severity === "CRITICAL" ? "عطل حرج في الخادم" : "عطل مهم في الخادم", content: `${incident.kind} · ${incident.occurrenceCount} مرة · ${incident.source}`, createdAt: new Date().toISOString() });
+  const alert = {
+    incidentId: incident.id,
+    severity: incident.severity,
+    title: incident.severity === "CRITICAL" ? "عطل حرج في الخادم" : "عطل مهم في الخادم",
+    content: `${incident.kind} · ${incident.occurrenceCount} مرة · ${incident.source}`,
+    createdAt: new Date().toISOString(),
+  };
+  alerts.unshift({ incidentId: alert.incidentId, title: alert.title, content: alert.content, createdAt: alert.createdAt });
   alerts.splice(MAX_ALERTS);
+  void Promise.resolve(getPushProvider().send(alert)).catch((error) => {
+    console.error("[monitoring] Push provider failed", error);
+  });
+}
+
+export type IngestServerIncidentInput = {
+  message?: unknown;
+  source?: unknown;
+  kind?: unknown;
+  severity?: unknown;
+  action?: unknown;
+  requestId?: unknown;
+  statusCode?: unknown;
+  stackTrace?: unknown;
+};
+
+function safeString(value: unknown, maxLength: number): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? redact(trimmed).slice(0, maxLength) : undefined;
+}
+
+function safeSeverity(value: unknown): ServerSeverity {
+  return value === "LOW" || value === "MEDIUM" || value === "HIGH" || value === "CRITICAL" ? value : "MEDIUM";
+}
+
+export function ingestServerIncident(input: IngestServerIncidentInput): ServerIncident {
+  const message = safeString(input.message, 12000) ?? "Client reported an unspecified error";
+  const source = safeString(input.source, 120) ?? "client";
+  const kind = safeString(input.kind, 64) ?? "CLIENT_ERROR";
+  const action = safeString(input.action, 120);
+  const requestId = safeString(input.requestId, 128);
+  const stackTrace = safeString(input.stackTrace, 12000);
+  const statusCode = typeof input.statusCode === "number" && Number.isInteger(input.statusCode) && input.statusCode >= 100 && input.statusCode <= 599
+    ? input.statusCode
+    : undefined;
+
+  return captureServerIncident({
+    error: message,
+    source,
+    kind,
+    severity: safeSeverity(input.severity),
+    action,
+    requestId,
+    statusCode,
+    stackTrace,
+  });
 }
 
 export function captureServerIncident(input: { error: unknown; source: string; kind?: string; severity?: ServerSeverity; action?: string; requestId?: string; statusCode?: number;   affectedUsers?: number; stackTrace?: string }): ServerIncident {
