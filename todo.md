@@ -336,3 +336,9 @@
 - [x] إضافة Retention Heartbeat يدوي بنتيجة تشغيل واضحة
 - [x] إضافة PushProvider وMockPushProvider مع قواعد HIGH/CRITICAL ومنع التكرار
 - [x] إضافة اختبارات Auth وRedaction وIngest وRetention وMock Push وFailure/Fallback
+
+## Development Migration and HTTP Verification
+
+- [x] تنفيذ Migration لجدول `error_events` في بيئة التطوير فقط بعد التحقق من الاتصال
+- [ ] تشغيل اختبار HTTP فعلي لـ`POST /api/errors/ingest` مع المصادقة والتنقيح والرفض
+- [x] تشغيل الفحوصات النهائية بعد Migration واختبار HTTP
