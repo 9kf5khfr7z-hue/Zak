@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const storage = new Map<string, string>();
+
+vi.mock("react-native", () => ({
+  Platform: { OS: "web" },
+}));
+vi.mock("../constants/oauth", () => ({
+  getApiBaseUrl: () => "http://localhost:3000",
+}));
+
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: {
     getItem: async (key: string) => storage.get(key) ?? null,
@@ -37,7 +45,7 @@ describe("app incidents", () => {
     expect(first.message).toBe("حدث خلل غير معروف داخل التطبيق");
 
     for (let index = 0; index < 55; index += 1) {
-      await recordAppIncident(`خلل ${index}`);
+      await recordAppIncident(`خلل ${"x".repeat(index + 1)}`);
     }
 
     const incidents = await getAppIncidents();

@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { captureServerIncident, createServerMonitoringMiddleware, getServerMonitoringSnapshot, installServerErrorMonitoring } from "./error-monitoring";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -28,6 +29,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  installServerErrorMonitoring();
   const app = express();
   const server = createServer(app);
 
@@ -54,6 +56,15 @@ async function startServer() {
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(createServerMonitoringMiddleware());
+
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/api/dev/monitoring", (_req, res) => res.json(getServerMonitoringSnapshot()));
+    app.post("/api/dev/monitoring/incidents", (req, res) => {
+      const incident = captureServerIncident({ error: typeof req.body?.message === "string" ? req.body.message : "Client incident", source: typeof req.body?.source === "string" ? req.body.source : "client", kind: typeof req.body?.kind === "string" ? req.body.kind : "CLIENT_ERROR", severity: ["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(req.body?.severity) ? req.body.severity : "MEDIUM", action: typeof req.body?.action === "string" ? req.body.action : undefined, requestId: typeof req.body?.requestId === "string" ? req.body.requestId : undefined, stackTrace: undefined });
+      res.status(202).json({ accepted: true, incidentId: incident.id });
+    });
+  }
 
   registerStorageProxy(app);
   registerOAuthRoutes(app);

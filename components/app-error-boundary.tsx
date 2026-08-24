@@ -13,7 +13,13 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    void recordAppIncident(error, info.componentStack?.trim() ? "واجهة التطبيق" : "خطأ عرض");
+    void recordAppIncident(error, info.componentStack?.trim() ? "واجهة التطبيق" : "خطأ عرض", {
+      kind: "UI_CRASH",
+      severity: "CRITICAL",
+      screen: info.componentStack?.split("\n").find(Boolean)?.trim() || "غير معروف",
+      action: "render",
+      stackTrace: info.componentStack || error.stack,
+    });
   }
 
   retry = () => {

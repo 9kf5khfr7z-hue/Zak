@@ -5,6 +5,8 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import {
   getAppIncidents,
+  getDevServerMonitoringSnapshot,
+  getIncidentHealthSummary,
   getIncidentSources,
   queryAppIncidents,
   type AppIncident,
@@ -30,12 +32,19 @@ export default function AdminIncidentsScreen() {
   const [dateFilter, setDateFilter] = useState<IncidentDateFilter>("all");
   const [source, setSource] = useState<string>("");
   const [sort, setSort] = useState<IncidentSort>("newest");
+  const [serverSummary, setServerSummary] = useState<Awaited<ReturnType<typeof getDevServerMonitoringSnapshot>>>(null);
 
   useFocusEffect(useCallback(() => {
     let active = true;
-    getAppIncidents().then((next) => { if (active) setIncidents(next); });
+    void Promise.all([getAppIncidents(), getDevServerMonitoringSnapshot()]).then(([next, server]) => {
+      if (!active) return;
+      setIncidents(next);
+      setServerSummary(server);
+    });
     return () => { active = false; };
   }, []));
+
+  const appSummary = useMemo(() => getIncidentHealthSummary(incidents), [incidents]);
 
   const sources = useMemo(() => getIncidentSources(incidents), [incidents]);
   const visibleIncidents = useMemo(
@@ -56,8 +65,14 @@ export default function AdminIncidentsScreen() {
 
         <View style={[styles.summary, { backgroundColor: openCount > 0 ? "#FFF4B8" : colors.surface, borderColor: openCount > 0 ? "#FFD21F" : colors.border }]}>
           <Text style={[styles.summaryNumber, { color: colors.foreground }]}>{openCount}</Text>
-          <Text style={[styles.summaryText, { color: colors.foreground }]}>أعطال غير مراجعة</Text>
+          <Text style={[styles.summaryText, { color: colors.foreground }]}>أعطال غير مراجعة في التطبيق</Text>
           {openCount > 0 ? <Text style={styles.newBadge}>جديد</Text> : null}
+        </View>
+        <View style={[styles.healthCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.healthTitle, { color: colors.foreground }]}>System Health</Text>
+          <Text style={[styles.healthMeta, { color: colors.muted }]}>التطبيق: {appSummary.errorsToday} ظهور اليوم · المستخدمون المتأثرون: {appSummary.affectedUsers}</Text>
+          <Text style={[styles.healthMeta, { color: colors.muted }]}>السيرفر والـAPI: {serverSummary ? `${serverSummary.summary.errorsToday} ظهور · ${serverSummary.summary.affectedUsers} مستخدم` : "غير متصل محلياً"}</Text>
+          <View style={styles.healthRow}><Text style={[styles.healthItem, { color: "#C62828" }]}>حرج {appSummary.critical + (serverSummary?.summary.critical ?? 0)}</Text><Text style={[styles.healthItem, { color: "#C2410C" }]}>عالٍ {appSummary.high + (serverSummary?.summary.high ?? 0)}</Text><Text style={[styles.healthItem, { color: "#A16207" }]}>متوسط {appSummary.medium + (serverSummary?.summary.medium ?? 0)}</Text><Text style={[styles.healthItem, { color: "#15803D" }]}>منخفض {appSummary.low + (serverSummary?.summary.low ?? 0)}</Text></View>
         </View>
 
         <Text style={[styles.section, { color: colors.foreground }]}>التصفية حسب التاريخ</Text>
@@ -109,5 +124,5 @@ export default function AdminIncidentsScreen() {
   );
 }
 
-const styles = StyleSheet.create({ content: { paddingBottom: 32 }, backButton: { alignSelf: "flex-end", paddingVertical: 10 }, backText: { fontSize: 12, fontWeight: "900" }, kicker: { fontSize: 10, fontWeight: "900", textAlign: "right", marginTop: 8 }, title: { fontSize: 28, fontWeight: "900", textAlign: "right", marginTop: 4 }, subtitle: { fontSize: 12, lineHeight: 19, textAlign: "right", marginTop: 8 }, summary: { borderWidth: 1, borderRadius: 18, padding: 15, marginTop: 16, alignItems: "flex-end" }, summaryNumber: { fontSize: 28, fontWeight: "900" }, summaryText: { fontSize: 12, fontWeight: "800", marginTop: 2 }, newBadge: { color: "#111111", backgroundColor: "#FFD21F", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontWeight: "900", marginTop: 8 }, section: { fontSize: 16, fontWeight: "900", textAlign: "right", marginTop: 20, marginBottom: 9 }, chips: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 }, horizontalChips: { flexDirection: "row-reverse", gap: 8 }, chip: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 }, chipText: { fontSize: 11, fontWeight: "800" }, resultsHeader: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" }, resultCount: { fontSize: 11, marginTop: 20 }, empty: { borderWidth: 1, borderRadius: 16, padding: 18, alignItems: "flex-end" }, emptyTitle: { fontSize: 14, fontWeight: "900" }, emptyText: { fontSize: 11, marginTop: 5 }, card: { borderWidth: 1, borderRadius: 17, padding: 14, marginBottom: 10 }, pressed: { opacity: 0.72 }, cardTop: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }, status: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, fontSize: 9, fontWeight: "900" }, cardDate: { fontSize: 10 }, cardMessage: { fontSize: 13, fontWeight: "900", textAlign: "right", marginTop: 12 }, cardSource: { fontSize: 10, textAlign: "right", marginTop: 6 }, detailsLink: { fontSize: 11, fontWeight: "900", textAlign: "right", marginTop: 12 },
+const styles = StyleSheet.create({ content: { paddingBottom: 32 }, healthCard: { borderWidth: 1, borderRadius: 18, padding: 14, marginTop: 12 }, healthTitle: { fontSize: 15, fontWeight: "900", textAlign: "right" }, healthMeta: { fontSize: 10, textAlign: "right", marginTop: 6 }, healthRow: { flexDirection: "row-reverse", justifyContent: "space-between", marginTop: 12 }, healthItem: { fontSize: 10, fontWeight: "900" }, backButton: { alignSelf: "flex-end", paddingVertical: 10 }, backText: { fontSize: 12, fontWeight: "900" }, kicker: { fontSize: 10, fontWeight: "900", textAlign: "right", marginTop: 8 }, title: { fontSize: 28, fontWeight: "900", textAlign: "right", marginTop: 4 }, subtitle: { fontSize: 12, lineHeight: 19, textAlign: "right", marginTop: 8 }, summary: { borderWidth: 1, borderRadius: 18, padding: 15, marginTop: 16, alignItems: "flex-end" }, summaryNumber: { fontSize: 28, fontWeight: "900" }, summaryText: { fontSize: 12, fontWeight: "800", marginTop: 2 }, newBadge: { color: "#111111", backgroundColor: "#FFD21F", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontWeight: "900", marginTop: 8 }, section: { fontSize: 16, fontWeight: "900", textAlign: "right", marginTop: 20, marginBottom: 9 }, chips: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 }, horizontalChips: { flexDirection: "row-reverse", gap: 8 }, chip: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9 }, chipText: { fontSize: 11, fontWeight: "800" }, resultsHeader: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" }, resultCount: { fontSize: 11, marginTop: 20 }, empty: { borderWidth: 1, borderRadius: 16, padding: 18, alignItems: "flex-end" }, emptyTitle: { fontSize: 14, fontWeight: "900" }, emptyText: { fontSize: 11, marginTop: 5 }, card: { borderWidth: 1, borderRadius: 17, padding: 14, marginBottom: 10 }, pressed: { opacity: 0.72 }, cardTop: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }, status: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, fontSize: 9, fontWeight: "900" }, cardDate: { fontSize: 10 }, cardMessage: { fontSize: 13, fontWeight: "900", textAlign: "right", marginTop: 12 }, cardSource: { fontSize: 10, textAlign: "right", marginTop: 6 }, detailsLink: { fontSize: 11, fontWeight: "900", textAlign: "right", marginTop: 12 },
 });
