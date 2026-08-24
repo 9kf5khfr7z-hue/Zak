@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { upsertErrorEvent, purgeResolvedErrorEvents } = vi.hoisted(() => ({
   upsertErrorEvent: vi.fn(),
@@ -16,8 +16,15 @@ import {
   resetServerMonitoring,
   ingestServerIncident,
 } from "../server/_core/error-monitoring";
-import { mockPushProvider, resetPushProvider } from "../server/_core/push-provider";
-import { getLastRetentionHeartbeat, resetRetentionHeartbeat, runRetentionHeartbeat } from "../server/_core/error-retention";
+import { mockPushProvider, ProductionPushProvider, resetPushProvider } from "../server/_core/push-provider";
+import {
+  getLastRetentionHeartbeat,
+  isDevelopmentRetentionScheduleRunning,
+  resetRetentionHeartbeat,
+  runRetentionHeartbeat,
+  startDevelopmentRetentionSchedule,
+  stopRetentionSchedule,
+} from "../server/_core/error-retention";
 
 async function flushPersistence() {
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -127,7 +134,7 @@ describe("server error monitoring persistence", () => {
     const result = await runRetentionHeartbeat(now);
 
     expect(purgeResolvedErrorEvents).toHaveBeenCalledWith(now);
-    expect(result).toEqual({ lastRunAt: now.toISOString(), deletedCount: 7, status: "SUCCESS" });
+    expect(result).toEqual({ lastRunAt: now.toISOString(), deletedCount: 7, status: "SUCCESS", attempts: 1 });
     expect(getLastRetentionHeartbeat()).toEqual(result);
   });
 
@@ -161,5 +168,75 @@ describe("server error monitoring persistence", () => {
     );
     expect(getServerMonitoringSnapshot().incidents).toHaveLength(1);
     error.mockRestore();
+  });
+});
+
+
+describe("pre-production retention and push hardening", () => {
+  beforeEach(() => {
+    resetRetentionHeartbeat();
+    vi.stubEnv("NODE_ENV", "development");
+  });
+
+  afterEach(() => {
+    stopRetentionSchedule();
+  });
+
+  it("starts and stops the Development retention schedule", async () => {
+    purgeResolvedErrorEvents.mockResolvedValue(2);
+    startDevelopmentRetentionSchedule({ intervalMs: 5, maxRetries: 1 });
+    expect(isDevelopmentRetentionScheduleRunning()).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    expect(purgeResolvedErrorEvents).toHaveBeenCalled();
+    stopRetentionSchedule();
+    expect(isDevelopmentRetentionScheduleRunning()).toBe(false);
+  });
+
+  it("retries a failed retention run and records the successful attempt", async () => {
+    purgeResolvedErrorEvents
+      .mockRejectedValueOnce(new Error("temporary failure"))
+      .mockResolvedValueOnce(4);
+    const result = await runRetentionHeartbeat(new Date("2026-08-24T12:00:00.000Z"), 1);
+    expect(result).toMatchObject({ status: "SUCCESS", deletedCount: 4, attempts: 2 });
+  });
+
+  it("keeps ProductionPushProvider dormant until explicitly enabled", async () => {
+    const provider = new ProductionPushProvider({ endpoint: "https://push.invalid", token: "do-not-log" });
+    await expect(provider.send({
+      incidentId: "incident-1",
+      severity: "CRITICAL",
+      title: "Critical",
+      content: "Test",
+      createdAt: new Date().toISOString(),
+    })).rejects.toThrow("not enabled");
+  });
+
+  it("rate-limits repeated production push alerts without making a second request", async () => {
+    const requests: unknown[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (_input, init) => {
+      requests.push(init?.body);
+      return new Response(null, { status: 202 });
+    }) as typeof fetch;
+    try {
+      const provider = new ProductionPushProvider({
+        endpoint: "https://push.invalid",
+        token: "test-token",
+        enabled: true,
+        rateLimitMs: 60_000,
+      });
+      const alert = {
+        incidentId: "incident-rate-limit",
+        severity: "HIGH" as const,
+        title: "High",
+        content: "Test",
+        createdAt: new Date().toISOString(),
+      };
+      await provider.send(alert);
+      await provider.send(alert);
+      expect(requests).toHaveLength(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

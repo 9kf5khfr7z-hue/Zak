@@ -28,6 +28,75 @@ export class MockPushProvider implements PushProvider {
   }
 }
 
+export type ProductionPushProviderConfig = {
+  endpoint: string;
+  token: string;
+  timeoutMs?: number;
+  maxRetries?: number;
+  rateLimitMs?: number;
+  enabled?: boolean;
+};
+
+/**
+ * Production adapter kept dormant until an approved provider and credentials
+ * are configured. It never logs the bearer token or response body.
+ */
+export class ProductionPushProvider implements PushProvider {
+  private readonly recent = new Map<string, number>();
+  private readonly timeoutMs: number;
+  private readonly maxRetries: number;
+  private readonly rateLimitMs: number;
+
+  constructor(private readonly config: ProductionPushProviderConfig) {
+    this.timeoutMs = config.timeoutMs ?? 5000;
+    this.maxRetries = config.maxRetries ?? 2;
+    this.rateLimitMs = config.rateLimitMs ?? 10 * 60 * 1000;
+  }
+
+  async send(alert: PushAlert): Promise<void> {
+    if (!this.config.enabled) {
+      throw new Error("Production push provider is not enabled");
+    }
+    if (!this.config.endpoint || !this.config.token) {
+      throw new Error("Production push provider is not configured");
+    }
+
+    const now = Date.now();
+    const lastSentAt = this.recent.get(alert.incidentId);
+    if (lastSentAt !== undefined && now - lastSentAt < this.rateLimitMs) return;
+    this.recent.set(alert.incidentId, now);
+
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+      try {
+        const response = await fetch(this.config.endpoint, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${this.config.token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(alert),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`Push provider returned HTTP ${response.status}`);
+        return;
+      } catch (error) {
+        lastError = error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  }
+
+  resetRateLimit(): void {
+    this.recent.clear();
+  }
+}
+
 export const mockPushProvider = new MockPushProvider();
 
 let activePushProvider: PushProvider = mockPushProvider;

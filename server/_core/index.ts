@@ -9,7 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { captureServerIncident, createServerMonitoringMiddleware, getServerMonitoringSnapshot, installServerErrorMonitoring } from "./error-monitoring";
 import { createErrorIngestHandler } from "./error-ingest";
-import { runRetentionHeartbeat } from "./error-retention";
+import { runRetentionHeartbeat, startDevelopmentRetentionSchedule } from "./error-retention";
 import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -33,6 +33,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   installServerErrorMonitoring();
+  if (process.env.NODE_ENV !== "production") {
+    startDevelopmentRetentionSchedule();
+  }
   const app = express();
   const server = createServer(app);
 

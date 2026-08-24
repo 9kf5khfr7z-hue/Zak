@@ -350,3 +350,12 @@
 - [x] التحقق من تمرير HIGH وCRITICAL إلى Mock Push ومنع التنبيه المكرر
 - [x] مزامنة Migration وmetadata الخاصة بـDrizzle والتحقق من الحالة النظيفة
 - [x] تشغيل مجموعة الاختبارات والفحوصات النهائية
+
+## Phase 3C — Pre-Production Hardening
+
+- [x] دمج HTTP Error Ingest Test مستقل ضمن CI مع Coverage خاص بالمراقبة
+- [x] إضافة Coverage Report والتحقق من عزل الاختبارات عن Production
+- [x] جدولة Retention Heartbeat في Development فقط ومراقبة عدة دورات
+- [x] اختبار حذف السجلات المنتهية والحفاظ على الحديثة وفشل Job وإعادة المحاولة
+- [x] إضافة ProductionPushProvider خلف PushProvider مع إبقائه غير مفعّل
+- [x] التحقق من retries وtimeout وrate limiting وعدم تسريب credentials

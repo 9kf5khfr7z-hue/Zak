@@ -33,6 +33,12 @@ jobs:
       - name: Merchant UI architecture guard
         run: pnpm test -- tests/merchant-ui-guard.test.ts
 
+      - name: Error Monitoring HTTP suite
+        run: pnpm test:error-monitoring
+
+      - name: Error Monitoring coverage
+        run: pnpm test:error-monitoring:coverage
+
       - name: Tests
         run: pnpm test
 
