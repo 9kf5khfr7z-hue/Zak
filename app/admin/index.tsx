@@ -1,9 +1,11 @@
-import { router } from "expo-router";
+import { useCallback, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { getDriverRatingStats } from "@/lib/driver-ratings";
 
-const stats = [
+const baseStats = [
   { label: "طلبات اليوم", value: "24", note: "+12%" },
   { label: "مندوبون متاحون", value: "8", note: "جاهزون" },
   { label: "متاجر نشطة", value: "31", note: "4 فئات" },
@@ -12,6 +14,17 @@ const stats = [
 
 export default function AdminDashboard() {
   const colors = useColors();
+  const [ratingStats, setRatingStats] = useState({ average: 0, count: 0 });
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    getDriverRatingStats().then((next) => { if (active) setRatingStats(next); });
+    return () => { active = false; };
+  }, []));
+  const stats = [
+    ...baseStats,
+    { label: "متوسط تقييم السائقين", value: ratingStats.count > 0 ? ratingStats.average.toFixed(1) : "—", note: ratingStats.count > 0 ? "من 5 نجوم" : "لا توجد تقييمات" },
+    { label: "إجمالي تقييمات السائقين", value: String(ratingStats.count), note: ratingStats.count === 1 ? "تقييم واحد" : "تقييمات مكتملة" },
+  ];
   return <ScreenContainer className="px-5" edges={["top", "bottom", "left", "right"]}><ScrollView contentContainerStyle={styles.content}><Text style={[styles.kicker, { color: colors.primary }]}>ZAK CONTROL CENTER</Text><Text style={[styles.title, { color: colors.foreground }]}>لوحة الإدارة</Text><View style={styles.hero}><Text style={styles.heroTitle}>زاك يمشي على الخريطة</Text><Text style={styles.heroText}>راقب الطلبات، التوزيع، العهدة والدعم من واجهة واحدة.</Text><View style={styles.pill}><Text style={styles.pillText}>النظام يعمل</Text></View></View><View style={styles.grid}>{stats.map((item) => <View key={item.label} style={[styles.stat, { backgroundColor: colors.surface, borderColor: colors.border }]}><Text style={[styles.value, { color: colors.foreground }]}>{item.value}</Text><Text style={[styles.label, { color: colors.muted }]}>{item.label}</Text><Text style={[styles.note, { color: item.label === "شكاوى مفتوحة" ? "#DC2626" : colors.primary }]}>{item.note}</Text></View>)}</View><Text style={[styles.section, { color: colors.foreground }]}>مراكز المتابعة</Text>{[
           { label: "الطلبات المباشرة" },
           { label: "خريطة المندوبين" },

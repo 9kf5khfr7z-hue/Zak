@@ -22,8 +22,21 @@ async function getRatings(): Promise<DriverRating[]> {
   }
 }
 
+export type DriverRatingStats = {
+  average: number;
+  count: number;
+};
+
 export async function getDriverRating(orderId: string): Promise<DriverRating | null> {
   return (await getRatings()).find((rating) => rating.orderId === orderId) ?? null;
+}
+
+export async function getDriverRatingStats(): Promise<DriverRatingStats> {
+  const ratings = await getRatings();
+  if (ratings.length === 0) return { average: 0, count: 0 };
+
+  const total = ratings.reduce((sum, item) => sum + item.rating, 0);
+  return { average: Number((total / ratings.length).toFixed(1)), count: ratings.length };
 }
 
 export async function submitDriverRating(input: {
