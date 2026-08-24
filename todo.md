@@ -390,3 +390,6 @@
 - [x] Final Security Gate: فحص Secrets والـpayload والـretry وعدم تسريب المفتاح
 - [x] Final Security Gate: تشغيل الاختبارات وTypeScript وlint وbuild
 - [ ] Production rollout: خطة تفعيل تدريجي مع rollback بعد اعتماد الأمان فقط
+
+- [x] تشخيص صفحة This site is under maintenance على النطاق المنشور وفتح لوحة مشرف الإدارة
+- [x] التحقق من مسار `/admin` والنطاق الرئيسي بعد إصلاح النشر
