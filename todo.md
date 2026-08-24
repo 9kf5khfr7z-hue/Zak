@@ -376,3 +376,17 @@
 - [x] إضافة retry/backoff محدود لمزود Push دون كشف الأسرار
 - [x] حفظ نتيجة Retention Heartbeat بشكل durable مع runId وtimestamps والحالة
 - [x] إضافة اختبارات الأمن وإعادة Security Review
+
+## Final Production Readiness Gate
+
+- [x] اعتماد مزود Push رسمي قبل أي تفعيل إنتاجي
+- [x] مراجعة connectors وSecrets الحالية وعدم وضع credentials في Git أو source code
+- [x] تجهيز أسماء Secrets المطلوبة عبر Secret Manager مع إبقاء ProductionPushProvider غير مفعّل
+- [ ] تنفيذ Security Review نهائي بعد اعتماد الإعدادات الفعلية
+- [ ] توثيق خطة Rollout تدريجي وخطة rollback ومؤشرات المراقبة
+
+- [ ] OneSignal: إدخال App ID وApp API Key عبر Secret Manager فقط
+- [x] OneSignal: إبقاء PUSH_ENABLED=false والتحقق من منع الإرسال الإنتاجي
+- [x] Final Security Gate: فحص Secrets والـpayload والـretry وعدم تسريب المفتاح
+- [x] Final Security Gate: تشغيل الاختبارات وTypeScript وlint وbuild
+- [ ] Production rollout: خطة تفعيل تدريجي مع rollback بعد اعتماد الأمان فقط

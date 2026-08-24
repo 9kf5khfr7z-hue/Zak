@@ -16,7 +16,12 @@ import {
   resetServerMonitoring,
   ingestServerIncident,
 } from "../server/_core/error-monitoring";
-import { mockPushProvider, ProductionPushProvider, resetPushProvider } from "../server/_core/push-provider";
+import {
+  mockPushProvider,
+  ProductionPushProvider,
+  productionPushConfigFromEnv,
+  resetPushProvider,
+} from "../server/_core/push-provider";
 import {
   getLastRetentionHeartbeat,
   isDevelopmentRetentionScheduleRunning,
@@ -204,7 +209,7 @@ describe("pre-production retention and push hardening", () => {
   });
 
   it("keeps ProductionPushProvider dormant until explicitly enabled", async () => {
-    const provider = new ProductionPushProvider({ endpoint: "https://push.invalid", token: "do-not-log" });
+    const provider = new ProductionPushProvider({ endpoint: "https://api.onesignal.com/notifications?c=push", apiKey: "os_v2_app_test_key", appId: "123e4567-e89b-42d3-a456-426614174000" });
     await expect(provider.send({
       incidentId: "incident-1",
       severity: "CRITICAL",
@@ -214,17 +219,63 @@ describe("pre-production retention and push hardening", () => {
     })).rejects.toThrow("not enabled");
   });
 
+  it("loads OneSignal configuration from environment and keeps sending disabled by default", () => {
+    const config = productionPushConfigFromEnv({
+      PUSH_PROVIDER: "onesignal",
+      PUSH_API_ENDPOINT: "https://api.onesignal.com/notifications?c=push",
+      PUSH_PROJECT_ID: "123e4567-e89b-42d3-a456-426614174000",
+      PUSH_API_KEY: "os_v2_app_test_key",
+      PUSH_ENABLED: "false",
+    });
+    expect(config).toMatchObject({
+      provider: "onesignal",
+      endpoint: "https://api.onesignal.com/notifications?c=push",
+      appId: "123e4567-e89b-42d3-a456-426614174000",
+      enabled: false,
+    });
+  });
+
+  it("retries transient OneSignal failures and succeeds without logging secrets", async () => {
+    const originalFetch = globalThis.fetch;
+    let attempts = 0;
+    globalThis.fetch = (async () => {
+      attempts += 1;
+      if (attempts === 1) return new Response(null, { status: 503 });
+      return new Response(null, { status: 200 });
+    }) as typeof fetch;
+    try {
+      const provider = new ProductionPushProvider({
+        endpoint: "https://api.onesignal.com/notifications?c=push",
+        apiKey: "os_v2_app_test_key",
+        appId: "123e4567-e89b-42d3-a456-426614174000",
+        enabled: true,
+        maxRetries: 1,
+      });
+      await provider.send({
+        incidentId: "incident-retry",
+        severity: "CRITICAL",
+        title: "Critical",
+        content: "Test",
+        createdAt: new Date().toISOString(),
+      });
+      expect(attempts).toBe(2);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("rate-limits repeated production push alerts without making a second request", async () => {
-    const requests: unknown[] = [];
+    const requests: Array<{ body?: BodyInit | null; headers?: HeadersInit }> = [];
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async (_input, init) => {
-      requests.push(init?.body);
+      requests.push({ body: init?.body, headers: init?.headers });
       return new Response(null, { status: 202 });
     }) as typeof fetch;
     try {
       const provider = new ProductionPushProvider({
-        endpoint: "https://push.invalid",
-        token: "test-token",
+        endpoint: "https://api.onesignal.com/notifications?c=push",
+        apiKey: "os_v2_app_test_key",
+        appId: "123e4567-e89b-42d3-a456-426614174000",
         enabled: true,
         rateLimitMs: 60_000,
       });
@@ -238,6 +289,16 @@ describe("pre-production retention and push hardening", () => {
       await provider.send(alert);
       await provider.send(alert);
       expect(requests).toHaveLength(1);
+      const request = requests[0];
+      expect(request.headers).toMatchObject({ Authorization: "Key os_v2_app_test_key", "content-type": "application/json" });
+      const payload = JSON.parse(String(request.body));
+      expect(payload).toMatchObject({
+        app_id: "123e4567-e89b-42d3-a456-426614174000",
+        included_segments: ["Admins"],
+        headings: { en: "High" },
+        contents: { en: "Test" },
+      });
+      expect(String(request.body)).not.toContain("os_v2_app_test_key");
     } finally {
       globalThis.fetch = originalFetch;
     }

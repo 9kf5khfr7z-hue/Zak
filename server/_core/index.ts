@@ -11,6 +11,7 @@ import { captureServerIncident, createServerMonitoringMiddleware, getServerMonit
 import { createErrorIngestHandler, createErrorIngestSecurityMiddleware } from "./error-ingest";
 import { runRetentionHeartbeat, startDevelopmentRetentionSchedule } from "./error-retention";
 import { sdk } from "./sdk";
+import { productionPushConfigFromEnv, validateProductionPushConfig } from "./push-provider";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -32,6 +33,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  if (process.env.NODE_ENV === "production" && process.env.PUSH_ENABLED === "true") {
+    validateProductionPushConfig(productionPushConfigFromEnv());
+  }
   installServerErrorMonitoring();
   if (process.env.NODE_ENV !== "production") {
     startDevelopmentRetentionSchedule();

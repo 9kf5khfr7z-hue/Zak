@@ -1,6 +1,6 @@
 # ZAK | زاك — Phase 3D Security Review
 
-**الحالة:** Phase 3E Remediation Review
+**الحالة:** Phase 3F OneSignal Pre-Production Security Gate
 
 **المراجع:** Manus AI
 
@@ -10,7 +10,7 @@
 
 المسار الحالي يطبق أساساً جيداً للمصادقة، التحقق، التنقيح، التخزين المنفصل، وتجميع التنبيهات. لا يظهر **Blocker** يسمح حالياً بتفعيل Production Push أو Scheduled Retention، لأن مزود الإنتاج غير مفعّل والبيئة الإنتاجية لا تُستخدم في الاختبارات.
 
-تم إغلاق ملاحظات Phase 3D الخاصة بحماية ingest وCORS وrate limiting وretry/backoff ومراقبة Retention durable في بيئة Pre-Production. لا يظهر **Blocker** في الاختبارات الحالية، لكن Production Push وProduction Retention ما زالا غير مفعّلين حتى اعتماد المزود وSecrets الفعلية.
+تم إغلاق ملاحظات Phase 3D الخاصة بحماية ingest وCORS وrate limiting وretry/backoff ومراقبة Retention durable في بيئة Pre-Production. تم اعتماد OneSignal وتكييف REST payload والترويسة `Authorization: Key ...` مع حارس `PUSH_ENABLED=false`. لا يظهر **Blocker** في كود التكامل، لكن الإرسال الإنتاجي وRetention الإنتاجي ما زالا غير مفعّلين.
 
 ## مصفوفة المراجعة
 
@@ -27,9 +27,9 @@
 | Storage isolation | **PASS** | `server/db.ts`, `drizzle/schema.ts` | ingest يكتب إلى `error_events` فقط عبر helper مخصص، ولا يملك مساراً لقراءة أو تعديل جداول Customer/Order/Driver. |
 | Production fallback | **PASS** | `server/_core/error-monitoring.ts` | fallback الذاكرة محصور عملياً في Development؛ في Production يسجل فشل التخزين ولا يعتبره نجاحاً صامتاً. يجب إبقاء هذا السلوك مغطى باختبار تشغيل إنتاجي. |
 | Abuse/rate limiting | **PASS** | `server/_core/error-ingest.ts`, `tests/error-ingest-http.test.ts` | توجد حراسة route-level مستقلة لمسار ingest مع استجابة 429 وانتهاء نافذة الاختبار، مع بقاء Authentication إلزامية. |
-| Push credentials | **PASS / NOT ACTIVATED** | `server/_core/push-provider.ts`, `server/_core/env.ts` | توجد حراسة تحقق صريحة للإعدادات، والمزود غير مفعّل افتراضياً. لا توجد credentials في Git أو المصدر أو fixtures أو logs. |
-| Push secret logging | **PASS** | `server/_core/push-provider.ts` | لا يسجل bearer token أو response body، واختبارات Phase 3C تتحقق من عدم تسريب الأسرار. |
-| Push activation guard | **PASS / LIMITED** | `server/_core/push-provider.ts` | المزود الخامل يرفض الإرسال ما لم يمرر `enabled: true`. الاعتماد الإنتاجي يتطلب startup guard صريحاً بعد تحديد المزود. |
+| Push credentials | **PASS / NOT ACTIVATED** | `server/_core/push-provider.ts`, `server/_core/index.ts`, Secret Manager | OneSignal هو المزود المعتمد، والحارس يتطلب `PUSH_API_KEY` و`PUSH_PROJECT_ID` عند التفعيل، بينما `PUSH_ENABLED=false` يمنع الإرسال. لم تُحفظ credentials في Git أو المصدر أو fixtures أو logs. |
+| Push secret logging | **PASS** | `server/_core/push-provider.ts`, `tests/server-error-monitoring.test.ts` | لا يسجل App API Key أو response body؛ والاختبارات تتحقق من أن المفتاح لا يدخل payload ولا يظهر في السجلات. |
+| Push activation guard | **PASS / LIMITED** | `server/_core/push-provider.ts`, `server/_core/index.ts` | المزود يرفض الإرسال ما لم يمرر `enabled: true`، وبدء Production مع `PUSH_ENABLED=true` يتطلب تهيئة OneSignal كاملة. لا توجد عملية تفعيل للجمهور. |
 | Retention environment guard | **PASS** | `server/_core/error-retention.ts`, `server/_core/index.ts` | الجدولة التلقائية تبدأ في Development فقط، والدالة ترفض التشغيل عند `NODE_ENV=production`. |
 | Retention retry behavior | **PASS — DEVELOPMENT ONLY** | `server/_core/error-retention.ts`, `tests/phase-3d-security.test.ts` | توجد retries محدودة، ونتيجة durable تتضمن runId وtimestamps والحالة والعدد والخطأ، مع بقاء الجدولة محصورة في Development. |
 | Production data isolation in tests | **PASS** | `tests/error-ingest-http.test.ts`, `tests/server-error-monitoring.test.ts` | الاختبارات تستخدم mocks وharness معزولاً ولا تعتمد على بيانات إنتاجية. |
@@ -42,21 +42,21 @@
 
 ## Secrets Review
 
-لم يتم اعتماد مزود Push إنتاجي في هذه المرحلة، ولم تتم إضافة أي credential. قبل التفعيل يجب أن تأتي القيم من Secrets/Environment Variables فقط، مثل `PUSH_PROVIDER`, `PUSH_API_KEY`, و`PUSH_PROJECT_ID` أو ما يعادلها حسب المزود المعتمد. يجب رفض بدء Production إذا كان المزود مفعلاً وكانت قيمة مطلوبة ناقصة، مع إبقاء القيم خارج Git والمصدر وملفات migration وfixtures والlogs.
+تم اعتماد OneSignal كمزود Push. الإعدادات المعتمدة هي `PUSH_PROVIDER=onesignal` و`PUSH_API_ENDPOINT=https://api.onesignal.com/notifications?c=push` و`PUSH_PROJECT_ID` كـOneSignal App ID و`PUSH_API_KEY` كمفتاح App API. يجب إدخال القيم الحساسة عبر Secret Manager فقط، مع إبقاء `PUSH_ENABLED=false` حتى إغلاق البوابة النهائية. يجب رفض بدء Production عند التفعيل إذا نقصت قيمة أو كان App ID غير صالح أو المفتاح ليس بصيغة App API المتوقعة.
 
-**النتيجة الحالية:** **PASS / NOT ACTIVATED** للمراجعة الأمنية البرمجية. لا يُفعّل ProductionPushProvider حتى اعتماد المزود وإضافة Secrets من Secret Manager/CI Secrets واختبار startup الفعلي في بيئة الإنتاج.
+**النتيجة الحالية:** **PASS / NOT ACTIVATED** للمراجعة الأمنية البرمجية وتكييف OneSignal. لم يتم إثبات مصادقة OneSignal الحية لأن الإرسال الإنتاجي مغلق ولم تُستخدم credentials فعلية في الاختبارات. لا يُفعّل ProductionPushProvider للجمهور قبل اختبار credential معزول ومراجعة rollback.
 
 ## قرار المراجعة
 
 | التصنيف | القرار |
 |---|---|
 | **PASS** | المصادقة، رفض الطلبات غير الموثقة، whitelist، التنقيح قبل التخزين، عزل جدول الأخطاء، عدم كشف التفاصيل الداخلية، fallback غير الصامت في Production، وعزل الاختبارات. |
-| **NEEDS FIX** | اعتماد مزود Push وإضافة credentials الفعلية عبر Secret Manager، ثم تنفيذ اختبار startup إنتاجي قبل التفعيل. |
+| **NEEDS FIX** | إدخال OneSignal App ID وApp API Key في Secret Manager، ثم تنفيذ اختبار credential معزول وإعادة اعتماد البوابة. |
 | **BLOCKER** | لا يوجد Blocker مكتشف في بيئة Pre-Production الحالية، بشرط عدم تفعيل Production Push أو Production Retention قبل إغلاق نقاط NEEDS FIX. |
 
 ## بوابة الإغلاق قبل Production
 
-لا تُفعّل Production حتى يتم اعتماد مزود Push، وإضافة Secrets عبر Secret Manager/CI Secrets، وتشغيل startup validation واختبار secrets من بيئة الإدارة، ثم إعادة هذه المراجعة على diff النهائي. تبقى flags الإنتاج مغلقة افتراضياً.
+لا تُفعّل Production حتى يتم إدخال Secrets عبر Secret Manager، وتشغيل startup validation واختبار OneSignal مع نطاق إداري داخلي فقط، ثم اعتماد rollback والمراقبة. تبقى `PUSH_ENABLED=false` وflags الإنتاج مغلقة افتراضياً.
 
 ## المراجع
 

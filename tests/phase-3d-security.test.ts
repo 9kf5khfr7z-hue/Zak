@@ -73,13 +73,15 @@ describe("Phase 3D security and production readiness", () => {
     vi.unstubAllEnvs();
   });
 
-  it("requires HTTPS and secrets when ProductionPushProvider is enabled", () => {
-    expect(() => validateProductionPushConfig({ enabled: true, endpoint: "http://push.local", token: "secret" })).toThrow(
-      "endpoint must use HTTPS",
+  it("requires OneSignal endpoint and secrets when enabled", () => {
+    const validAppId = "123e4567-e89b-42d3-a456-426614174000";
+    const validKey = "os_v2_app_test_key";
+    expect(() => validateProductionPushConfig({ enabled: true, endpoint: "http://push.local", apiKey: validKey, appId: validAppId })).toThrow(
+      "official HTTPS notifications endpoint",
     );
-    expect(() => validateProductionPushConfig({ enabled: true, endpoint: "https://push.example.test", token: "" })).toThrow(
-      "requires endpoint and token secrets",
+    expect(() => validateProductionPushConfig({ enabled: true, endpoint: "https://api.onesignal.com/notifications?c=push", apiKey: "", appId: validAppId })).toThrow(
+      "requires PUSH_API_KEY and PUSH_PROJECT_ID",
     );
-    expect(() => new ProductionPushProvider({ enabled: false, endpoint: "", token: "" })).not.toThrow();
+    expect(() => new ProductionPushProvider({ enabled: false })).not.toThrow();
   });
 });
