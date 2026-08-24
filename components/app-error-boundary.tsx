@@ -3,13 +3,13 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { recordAppIncident } from "@/lib/app-incidents";
 
 type Props = { children: ReactNode };
-type State = { hasError: boolean };
+type State = { hasError: boolean; retryKey: number };
 
 export class AppErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, retryKey: 0 };
 
   static getDerivedStateFromError(): State {
-    return { hasError: true };
+    return { hasError: true, retryKey: 0 };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -17,11 +17,11 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   retry = () => {
-    this.setState({ hasError: false });
+    this.setState((current) => ({ hasError: false, retryKey: current.retryKey + 1 }));
   };
 
   render() {
-    if (!this.state.hasError) return this.props.children;
+    if (!this.state.hasError) return <React.Fragment key={this.state.retryKey}>{this.props.children}</React.Fragment>;
 
     return (
       <View style={styles.container}>
@@ -29,10 +29,10 @@ export class AppErrorBoundary extends Component<Props, State> {
           <Text style={styles.logo}>ZAK</Text>
           <Text style={styles.title}>صار خلل بسيط</Text>
           <Text style={styles.message}>
-            التطبيق ما توقفش. اضغط إعادة المحاولة ونكملوا من جديد، وتم تسجيل الخلل للإدارة.
+            التطبيق ما توقفش. اضغط إعادة تشغيل العملية ونكملوا من جديد، وتم تسجيل الخلل للإدارة.
           </Text>
           <Pressable onPress={this.retry} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-            <Text style={styles.buttonText}>إعادة المحاولة</Text>
+            <Text style={styles.buttonText}>إعادة تشغيل العملية</Text>
           </Pressable>
         </View>
       </View>
