@@ -68,6 +68,27 @@ export const appRouter = router({
   }),
   admin: router({
     health: adminProcedure.query(() => ({ ok: true })),
+    errorMonitoring: router({
+      list: adminProcedure
+        .input(z.object({
+          severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
+          status: z.enum(["OPEN", "ACKNOWLEDGED", "RESOLVED"]).optional(),
+          kind: z.string().trim().min(1).max(80).optional(),
+          from: z.coerce.date().optional(),
+          to: z.coerce.date().optional(),
+          limit: z.number().int().min(1).max(500).optional(),
+        }).optional())
+        .query(({ input }) => db.listErrorEvents(input)),
+      get: adminProcedure
+        .input(z.object({ eventId: z.string().trim().min(1).max(128) }))
+        .query(({ input }) => db.getErrorEventById(input.eventId)),
+      updateStatus: adminProcedure
+        .input(z.object({
+          eventId: z.string().trim().min(1).max(128),
+          status: z.enum(["OPEN", "ACKNOWLEDGED", "RESOLVED"]),
+        }))
+        .mutation(({ input }) => db.updateErrorEventStatus(input.eventId, input.status)),
+    }),
   }),
 });
 

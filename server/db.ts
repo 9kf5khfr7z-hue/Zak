@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { deliveryOrders, driverProfiles, InsertDeliveryOrder, InsertUser, users } from "../drizzle/schema";
+import { deliveryOrders, driverProfiles, errorEvents, ErrorEvent, InsertDeliveryOrder, InsertErrorEvent, InsertUser, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -112,4 +112,75 @@ export async function getOrderTrackingForDriver(orderNumber: string, driverUserI
     .where(and(eq(deliveryOrders.orderNumber, orderNumber), eq(driverProfiles.userId, driverUserId)))
     .limit(1);
   return result[0] ?? undefined;
+}
+
+export async function insertErrorEvent(input: InsertErrorEvent): Promise<ErrorEvent | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  await db.insert(errorEvents).values(input);
+  const result = await db.select().from(errorEvents).where(eq(errorEvents.eventId, input.eventId)).limit(1);
+  return result[0];
+}
+
+export async function getErrorEventById(eventId: string): Promise<ErrorEvent | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(errorEvents).where(eq(errorEvents.eventId, eventId)).limit(1);
+  return result[0];
+}
+
+export async function listErrorEvents(filters?: {
+  severity?: ErrorEvent["severity"];
+  status?: ErrorEvent["status"];
+  kind?: string;
+  from?: Date;
+  to?: Date;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.severity) conditions.push(eq(errorEvents.severity, filters.severity));
+  if (filters?.status) conditions.push(eq(errorEvents.status, filters.status));
+  if (filters?.kind) conditions.push(eq(errorEvents.kind, filters.kind));
+  if (filters?.from) conditions.push(gte(errorEvents.lastSeenAt, filters.from));
+  if (filters?.to) conditions.push(lt(errorEvents.lastSeenAt, filters.to));
+  return db
+    .select()
+    .from(errorEvents)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(errorEvents.lastSeenAt))
+    .limit(Math.min(Math.max(filters?.limit ?? 100, 1), 500));
+}
+
+export async function updateErrorEventStatus(eventId: string, status: ErrorEvent["status"]) {
+  const db = await getDb();
+  if (!db) return undefined;
+  await db.update(errorEvents).set({
+    status,
+    reviewedAt: status === "OPEN" ? null : new Date(),
+  }).where(eq(errorEvents.eventId, eventId));
+  const result = await db.select().from(errorEvents).where(eq(errorEvents.eventId, eventId)).limit(1);
+  return result[0];
+}
+
+export async function purgeResolvedErrorEvents(now = new Date()) {
+  const db = await getDb();
+  if (!db) return 0;
+  const cutoffs = {
+    CRITICAL: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000),
+    HIGH: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000),
+    MEDIUM: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+    LOW: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000),
+  } as const;
+  let deleted = 0;
+  for (const [severity, cutoff] of Object.entries(cutoffs) as Array<[ErrorEvent["severity"], Date]>) {
+    const result = await db.delete(errorEvents).where(and(
+      eq(errorEvents.severity, severity),
+      eq(errorEvents.status, "RESOLVED"),
+      lt(errorEvents.lastSeenAt, cutoff),
+    ));
+    deleted += Number(result[0]?.affectedRows ?? 0);
+  }
+  return deleted;
 }

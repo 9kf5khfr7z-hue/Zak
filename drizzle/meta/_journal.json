@@ -22,6 +22,20 @@
       "when": 1787274878121,
       "tag": "0002_high_true_believers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787557721319,
+      "tag": "0003_bitter_jane_foster",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1787557796232,
+      "tag": "0004_nebulous_talisman",
+      "breakpoints": true
     }
   ]
 }

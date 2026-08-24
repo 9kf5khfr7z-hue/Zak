@@ -304,3 +304,20 @@
 - [x] توسيع لوحة الإدارة بـSystem Health والبحث والتفاصيل والنسخ والاتجاهات
 - [x] إضافة اختبارات الخصوصية والتجميع والتنبيهات وعدم تغيير الطلبات أو Driver Lock
 - [x] تشغيل regression checks كاملة وحفظ النسخة قبل أي انتقال للإنتاج
+
+- [ ] تصميم جدول error_events وMigration قابلة للمراجعة دون تنفيذ Production
+- [ ] تنفيذ Error API آمن مع التحقق والتجميع
+- [ ] إضافة صلاحيات Admin لحالة سجل الخطأ ومنع المستخدم العادي
+- [ ] إضافة Push Provider قابل للتبديل وقواعد CRITICAL/HIGH وrate limiting
+- [ ] تنفيذ سياسة retention وJob آمن لا يحذف السجلات النشطة
+- [ ] اختبار الصلاحيات والتنبيهات والحذف وتشغيل regression checks
+- [ ] تقرير جاهزية Phase 3 وحفظ نسخة قبل أي ربط إنتاجي
+
+## Phase 3 — Production Error Monitoring
+
+- [x] إضافة إجراءات admin-only لعرض قائمة error_events وتفاصيلها وتحديث حالتها عبر tRPC
+- [x] إضافة اختبارات تفويض لإجراءات errorMonitoring مع عزل قاعدة البيانات
+- [ ] نقل التقاط أخطاء السيرفر إلى تخزين persistent مع fallback Development-Only
+- [ ] إضافة Error Ingest محمي
+- [ ] إضافة Push adapter قابل للتبديل للتنبيهات الحرجة
+- [ ] إضافة Heartbeat لسياسة الاحتفاظ
