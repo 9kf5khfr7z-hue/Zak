@@ -15,6 +15,7 @@ import {
   recordAppIncident,
   resetAppIncidents,
   resolveAllAppIncidents,
+  queryAppIncidents,
 } from "../lib/app-incidents";
 
 beforeEach(async () => {
@@ -41,6 +42,19 @@ describe("app incidents", () => {
 
     const incidents = await getAppIncidents();
     expect(incidents).toHaveLength(50);
+  });
+
+  it("filters by date and source, then sorts newest or oldest", () => {
+    const now = new Date("2026-08-24T12:00:00.000Z");
+    const incidents = [
+      { id: "old", message: "قديم", source: "شاشة الطلب", createdAt: "2026-08-10T10:00:00.000Z", resolved: false },
+      { id: "recent", message: "حديث", source: "شاشة الطلب", createdAt: "2026-08-23T10:00:00.000Z", resolved: false },
+      { id: "today", message: "اليوم", source: "شاشة الدخول", createdAt: "2026-08-24T09:00:00.000Z", resolved: false },
+    ];
+
+    expect(queryAppIncidents(incidents, { dateFilter: "last7days", source: "شاشة الطلب", now }).map((item) => item.id)).toEqual(["recent"]);
+    expect(queryAppIncidents(incidents, { dateFilter: "today", now }).map((item) => item.id)).toEqual(["today"]);
+    expect(queryAppIncidents(incidents, { sort: "oldest", now }).map((item) => item.id)).toEqual(["old", "recent", "today"]);
   });
 
   it("allows the admin to mark all open incidents as reviewed", async () => {
