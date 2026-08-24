@@ -1,4 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
+import { createHash } from "node:crypto";
+
+import { upsertErrorEvent } from "../db";
 
 export type ServerSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type ServerIncident = {
@@ -37,6 +40,41 @@ function fingerprint(message: string, source: string, kind: string): string {
   return `${kind}|${source}|${message.toLowerCase().replace(/\d+/g, "#")}`;
 }
 
+function persistentEventId(key: string, timestamp: number): string {
+  const bucket = Math.floor(timestamp / DEDUPE_WINDOW_MS);
+  const digest = createHash("sha256").update(`${key}|${bucket}`).digest("hex").slice(0, 24).toUpperCase();
+  return `SRV-${digest}`;
+}
+
+async function persistIncident(incident: ServerIncident): Promise<void> {
+  try {
+    const persisted = await upsertErrorEvent({
+      eventId: incident.id,
+      fingerprint: incident.fingerprint,
+      severity: incident.severity,
+      kind: incident.kind,
+      message: incident.message,
+      source: incident.source,
+      action: incident.action,
+      requestId: incident.requestId,
+      stackTrace: incident.stackTrace,
+      occurrenceCount: 1,
+      affectedUsers: 1,
+      firstSeenAt: new Date(incident.createdAt),
+      lastSeenAt: new Date(incident.lastSeenAt),
+    });
+    if (!persisted && process.env.NODE_ENV === "production") {
+      console.error("[monitoring] Persistent error storage is unavailable in production");
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[monitoring] Failed to persist server incident", error);
+    } else {
+      console.warn("[monitoring] Using Development memory fallback", error);
+    }
+  }
+}
+
 function alertFor(incident: ServerIncident): void {
   if (incident.severity !== "HIGH" && incident.severity !== "CRITICAL") return;
   if (alerts.some((alert) => alert.incidentId === incident.id)) return;
@@ -57,12 +95,14 @@ export function captureServerIncident(input: { error: unknown; source: string; k
     const updated = { ...existing, lastSeenAt: now, resolved: false, occurrenceCount: existing.occurrenceCount + 1, affectedUsers: existing.affectedUsers + (input.affectedUsers ?? 0), severity: input.severity ?? existing.severity, statusCode: input.statusCode ?? existing.statusCode };
     incidents.splice(existingIndex, 1);
     incidents.unshift(updated);
+    void persistIncident({ ...updated, id: persistentEventId(key, Date.now()) });
     alertFor(updated);
     return updated;
   }
-  const incident: ServerIncident = { id: `SRV-${String(Date.now()).slice(-8)}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`, fingerprint: key, kind, severity: input.severity ?? "HIGH", message, source, action: input.action, requestId: input.requestId, statusCode: input.statusCode, createdAt: now, lastSeenAt: now, occurrenceCount: 1, affectedUsers: Math.max(1, input.affectedUsers ?? 1), resolved: false, stackTrace: input.stackTrace ? redact(input.stackTrace) : input.error instanceof Error ? redact(input.error.stack ?? "") : undefined };
+  const incident: ServerIncident = { id: persistentEventId(key, Date.now()), fingerprint: key, kind, severity: input.severity ?? "HIGH", message, source, action: input.action, requestId: input.requestId, statusCode: input.statusCode, createdAt: now, lastSeenAt: now, occurrenceCount: 1, affectedUsers: Math.max(1, input.affectedUsers ?? 1), resolved: false, stackTrace: input.stackTrace ? redact(input.stackTrace) : input.error instanceof Error ? redact(input.error.stack ?? "") : undefined };
   incidents.unshift(incident);
   incidents.splice(MAX_INCIDENTS);
+  void persistIncident(incident);
   alertFor(incident);
   return incident;
 }

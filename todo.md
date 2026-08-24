@@ -321,3 +321,10 @@
 - [ ] إضافة Error Ingest محمي
 - [ ] إضافة Push adapter قابل للتبديل للتنبيهات الحرجة
 - [ ] إضافة Heartbeat لسياسة الاحتفاظ
+
+## Phase 3A — Error Monitoring Foundation
+
+- [x] مراجعة مسار التقاط أخطاء السيرفر الحالي وتوثيق نقطة التخزين
+- [x] ربط التقاط أخطاء السيرفر بتخزين دائم مع fallback محلي في Development فقط
+- [x] ضمان أن فشل التخزين لا يتحول إلى fallback صامت في Production
+- [x] إضافة اختبارات persistence وDevelopment fallback دون تنفيذ Migration أو تغيير قاعدة البيانات الفعلية
