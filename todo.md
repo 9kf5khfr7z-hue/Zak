@@ -340,5 +340,13 @@
 ## Development Migration and HTTP Verification
 
 - [x] تنفيذ Migration لجدول `error_events` في بيئة التطوير فقط بعد التحقق من الاتصال
-- [ ] تشغيل اختبار HTTP فعلي لـ`POST /api/errors/ingest` مع المصادقة والتنقيح والرفض
+- [x] تشغيل اختبار HTTP فعلي لـ`POST /api/errors/ingest` مع المصادقة والتنقيح والرفض
 - [x] تشغيل الفحوصات النهائية بعد Migration واختبار HTTP
+
+## Phase 3B — HTTP Ingest Verification
+
+- [x] إنشاء Mock Auth Session معزولة لاختبارات HTTP
+- [x] إضافة اختبار HTTP آلي لمسار `/api/errors/ingest` للمصادقة والرفض والتنقيح
+- [x] التحقق من تمرير HIGH وCRITICAL إلى Mock Push ومنع التنبيه المكرر
+- [x] مزامنة Migration وmetadata الخاصة بـDrizzle والتحقق من الحالة النظيفة
+- [x] تشغيل مجموعة الاختبارات والفحوصات النهائية
