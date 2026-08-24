@@ -134,7 +134,10 @@ describe("server error monitoring persistence", () => {
     const result = await runRetentionHeartbeat(now);
 
     expect(purgeResolvedErrorEvents).toHaveBeenCalledWith(now);
-    expect(result).toEqual({ lastRunAt: now.toISOString(), deletedCount: 7, status: "SUCCESS", attempts: 1 });
+    expect(result).toMatchObject({ lastRunAt: now.toISOString(), deletedCount: 7, status: "SUCCESS", attempts: 1 });
+    expect(result.runId).toMatch(/^retention-\d+-\d+$/);
+    expect(result.startedAt).toBe(now.toISOString());
+    expect(result.finishedAt).toBeTruthy();
     expect(getLastRetentionHeartbeat()).toEqual(result);
   });
 

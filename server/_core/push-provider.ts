@@ -64,12 +64,14 @@ export class ProductionPushProvider implements PushProvider {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly rateLimitMs: number;
+  private readonly backoffBaseMs: number;
 
   constructor(private readonly config: ProductionPushProviderConfig) {
     validateProductionPushConfig(config);
     this.timeoutMs = config.timeoutMs ?? 5000;
     this.maxRetries = config.maxRetries ?? 2;
     this.rateLimitMs = config.rateLimitMs ?? 10 * 60 * 1000;
+    this.backoffBaseMs = 100;
   }
 
   async send(alert: PushAlert): Promise<void> {
@@ -103,6 +105,9 @@ export class ProductionPushProvider implements PushProvider {
         return;
       } catch (error) {
         lastError = error;
+        if (attempt < this.maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, this.backoffBaseMs * 2 ** attempt));
+        }
       } finally {
         clearTimeout(timeout);
       }

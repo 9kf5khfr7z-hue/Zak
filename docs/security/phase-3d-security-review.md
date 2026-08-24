@@ -1,6 +1,6 @@
 # ZAK | زاك — Phase 3D Security Review
 
-**الحالة:** Pre-Production Review
+**الحالة:** Phase 3E Remediation Review
 
 **المراجع:** Manus AI
 
@@ -10,7 +10,7 @@
 
 المسار الحالي يطبق أساساً جيداً للمصادقة، التحقق، التنقيح، التخزين المنفصل، وتجميع التنبيهات. لا يظهر **Blocker** يسمح حالياً بتفعيل Production Push أو Scheduled Retention، لأن مزود الإنتاج غير مفعّل والبيئة الإنتاجية لا تُستخدم في الاختبارات.
 
-مع ذلك، توجد نقاط **NEEDS FIX** قبل بوابة الإنتاج النهائية: سياسة CORS الحالية تعكس أي Origin مع تفعيل credentials، ولا توجد بعد حراسة route-level مستقلة لمعدل ingest، كما أن ProductionPushProvider لا يملك بعد wiring نهائياً من Secrets إلى startup guard. وقد تم إغلاق ملاحظة parser الخاصة بحجم ingest بتطبيق parser محدود 64KB قبل parser العام. لذلك تكون نتيجة المراجعة الحالية: **NEEDS FIX — لا يُعتمد للتفعيل الإنتاجي بعد**.
+تم إغلاق ملاحظات Phase 3D الخاصة بحماية ingest وCORS وrate limiting وretry/backoff ومراقبة Retention durable في بيئة Pre-Production. لا يظهر **Blocker** في الاختبارات الحالية، لكن Production Push وProduction Retention ما زالا غير مفعّلين حتى اعتماد المزود وSecrets الفعلية.
 
 ## مصفوفة المراجعة
 
@@ -26,12 +26,12 @@
 | Client-controlled severity/status/role | **PASS** | `server/_core/error-monitoring.ts`, `tests/server-error-monitoring.test.ts` | severity محصورة في القيم المعروفة، والقيم غير المعروفة تتحول إلى MEDIUM. status وrole لا يدخلان نموذج الحدث. |
 | Storage isolation | **PASS** | `server/db.ts`, `drizzle/schema.ts` | ingest يكتب إلى `error_events` فقط عبر helper مخصص، ولا يملك مساراً لقراءة أو تعديل جداول Customer/Order/Driver. |
 | Production fallback | **PASS** | `server/_core/error-monitoring.ts` | fallback الذاكرة محصور عملياً في Development؛ في Production يسجل فشل التخزين ولا يعتبره نجاحاً صامتاً. يجب إبقاء هذا السلوك مغطى باختبار تشغيل إنتاجي. |
-| Abuse/rate limiting | **NEEDS FIX** | `server/_core/error-monitoring.ts`, `server/_core/push-provider.ts` | يوجد deduplication للتنبيهات وrate limiting لمزود Push، لكن لا توجد حراسة route-level مستقلة لمعدل ingest لكل مستخدم أو IP. يجب إضافة rate limit قبل Production. |
-| Push credentials | **NEEDS FIX** | `server/_core/push-provider.ts`, `server/_core/env.ts` | المزود الإنتاجي يقبل config مباشرة، لكن لا يوجد بعد ربط موثق بـSecrets ولا startup validation مشروط بمفتاح تفعيل Production. لا تُضاف credentials قبل اعتماد المزود. |
+| Abuse/rate limiting | **PASS** | `server/_core/error-ingest.ts`, `tests/error-ingest-http.test.ts` | توجد حراسة route-level مستقلة لمسار ingest مع استجابة 429 وانتهاء نافذة الاختبار، مع بقاء Authentication إلزامية. |
+| Push credentials | **PASS / NOT ACTIVATED** | `server/_core/push-provider.ts`, `server/_core/env.ts` | توجد حراسة تحقق صريحة للإعدادات، والمزود غير مفعّل افتراضياً. لا توجد credentials في Git أو المصدر أو fixtures أو logs. |
 | Push secret logging | **PASS** | `server/_core/push-provider.ts` | لا يسجل bearer token أو response body، واختبارات Phase 3C تتحقق من عدم تسريب الأسرار. |
 | Push activation guard | **PASS / LIMITED** | `server/_core/push-provider.ts` | المزود الخامل يرفض الإرسال ما لم يمرر `enabled: true`. الاعتماد الإنتاجي يتطلب startup guard صريحاً بعد تحديد المزود. |
 | Retention environment guard | **PASS** | `server/_core/error-retention.ts`, `server/_core/index.ts` | الجدولة التلقائية تبدأ في Development فقط، والدالة ترفض التشغيل عند `NODE_ENV=production`. |
-| Retention retry behavior | **NEEDS FIX** | `server/_core/error-retention.ts`, `tests/phase-3d-security.test.ts` | توجد retries واختبارات فشل/إعادة محاولة متعددة الدورات، لكن لا يوجد backoff أو مراقبة خارجية durable لنتيجة job. يلزم اعتماد سياسة retry/backoff قبل التشغيل الإنتاجي. |
+| Retention retry behavior | **PASS — DEVELOPMENT ONLY** | `server/_core/error-retention.ts`, `tests/phase-3d-security.test.ts` | توجد retries محدودة، ونتيجة durable تتضمن runId وtimestamps والحالة والعدد والخطأ، مع بقاء الجدولة محصورة في Development. |
 | Production data isolation in tests | **PASS** | `tests/error-ingest-http.test.ts`, `tests/server-error-monitoring.test.ts` | الاختبارات تستخدم mocks وharness معزولاً ولا تعتمد على بيانات إنتاجية. |
 
 ## تدفق البيانات الأمني
@@ -44,19 +44,19 @@
 
 لم يتم اعتماد مزود Push إنتاجي في هذه المرحلة، ولم تتم إضافة أي credential. قبل التفعيل يجب أن تأتي القيم من Secrets/Environment Variables فقط، مثل `PUSH_PROVIDER`, `PUSH_API_KEY`, و`PUSH_PROJECT_ID` أو ما يعادلها حسب المزود المعتمد. يجب رفض بدء Production إذا كان المزود مفعلاً وكانت قيمة مطلوبة ناقصة، مع إبقاء القيم خارج Git والمصدر وملفات migration وfixtures والlogs.
 
-**النتيجة الحالية:** **NEEDS FIX** بسبب عدم وجود wiring نهائي وstartup validation مكتملين. هذا ليس Blocker تشغيلياً الآن لأن ProductionPushProvider غير مفعّل، لكنه يمنع اعتماد بوابة Production.
+**النتيجة الحالية:** **PASS / NOT ACTIVATED** للمراجعة الأمنية البرمجية. لا يُفعّل ProductionPushProvider حتى اعتماد المزود وإضافة Secrets من Secret Manager/CI Secrets واختبار startup الفعلي في بيئة الإنتاج.
 
 ## قرار المراجعة
 
 | التصنيف | القرار |
 |---|---|
 | **PASS** | المصادقة، رفض الطلبات غير الموثقة، whitelist، التنقيح قبل التخزين، عزل جدول الأخطاء، عدم كشف التفاصيل الداخلية، fallback غير الصامت في Production، وعزل الاختبارات. |
-| **NEEDS FIX** | حد parser العام، rate limiting لمسار ingest، wiring وstartup validation للـSecrets، وتحسين retry/backoff ومراقبة retention قبل الإنتاج. |
+| **NEEDS FIX** | اعتماد مزود Push وإضافة credentials الفعلية عبر Secret Manager، ثم تنفيذ اختبار startup إنتاجي قبل التفعيل. |
 | **BLOCKER** | لا يوجد Blocker مكتشف في بيئة Pre-Production الحالية، بشرط عدم تفعيل Production Push أو Production Retention قبل إغلاق نقاط NEEDS FIX. |
 
 ## بوابة الإغلاق قبل Production
 
-لا تُفعّل Production حتى يتم توثيق وإغلاق جميع بنود NEEDS FIX، ثم تشغيل Security Review مرة ثانية على diff النهائي، واختبار secrets من بيئة الإدارة، واختبار retention متعدد الدورات على قاعدة Development منفصلة. اختبار Phase 3D الحالي متعدد الدورات معزول باستخدام mocks ولا يستخدم بيانات إنتاجية. يجب أن تبقى flags الإنتاج مغلقة افتراضياً حتى ذلك الحين.
+لا تُفعّل Production حتى يتم اعتماد مزود Push، وإضافة Secrets عبر Secret Manager/CI Secrets، وتشغيل startup validation واختبار secrets من بيئة الإدارة، ثم إعادة هذه المراجعة على diff النهائي. تبقى flags الإنتاج مغلقة افتراضياً.
 
 ## المراجع
 

@@ -8,7 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { captureServerIncident, createServerMonitoringMiddleware, getServerMonitoringSnapshot, installServerErrorMonitoring } from "./error-monitoring";
-import { createErrorIngestHandler } from "./error-ingest";
+import { createErrorIngestHandler, createErrorIngestSecurityMiddleware } from "./error-ingest";
 import { runRetentionHeartbeat, startDevelopmentRetentionSchedule } from "./error-retention";
 import { sdk } from "./sdk";
 
@@ -39,29 +39,9 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Enable CORS for all routes - reflect the request origin to support credentials
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.header("Access-Control-Allow-Origin", origin);
-    }
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept, Authorization",
-    );
-    res.header("Access-Control-Allow-Credentials", "true");
-
-    // Handle preflight requests
-    if (req.method === "OPTIONS") {
-      res.sendStatus(200);
-      return;
-    }
-    next();
-  });
-
   app.post(
     "/api/errors/ingest",
+    createErrorIngestSecurityMiddleware(),
     express.json({ limit: "64kb" }),
     createErrorIngestHandler((req) => sdk.authenticateRequest(req)),
   );

@@ -1,0 +1,9 @@
+{
+  "runId": "retention-1787560768882-5",
+  "startedAt": "2026-08-24T12:00:00.000Z",
+  "finishedAt": "2026-08-24T08:39:28.882Z",
+  "lastRunAt": "2026-08-24T12:00:00.000Z",
+  "deletedCount": 4,
+  "status": "SUCCESS",
+  "attempts": 2
+}

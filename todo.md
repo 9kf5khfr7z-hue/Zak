@@ -367,3 +367,12 @@
 - [x] إضافة اختبار Retention متعدد الدورات في Development مع failure/retry
 - [x] التحقق من عزل الاختبارات عن Production وعدم استخدام بياناتها
 - [x] تشغيل الفحوصات النهائية وحفظ تقرير بوابة الإنتاج
+
+## Phase 3E — Security Remediation
+
+- [x] مراجعة ملاحظات Security Review والتهيئة الحالية
+- [x] إغلاق حراسة Secrets وCORS وrate limiting لمسار ingest
+- [x] إضافة اختبار 429 وانتهاء نافذة rate limit
+- [x] إضافة retry/backoff محدود لمزود Push دون كشف الأسرار
+- [x] حفظ نتيجة Retention Heartbeat بشكل durable مع runId وtimestamps والحالة
+- [x] إضافة اختبارات الأمن وإعادة Security Review
